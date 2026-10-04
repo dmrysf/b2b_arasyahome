@@ -5,7 +5,7 @@ B2B introduces no security model of its own. It uses the Operations API's Centra
 ## Authentication and session
 
 - There is no local authentication, no B2B users or passwords table, no JWT and no third-party identity provider.
-- The session is the API-owned opaque cookie `arasya_session`, set host-only on `api.arasyahome.ro` with `Secure`, `HttpOnly` and `SameSite=Lax`. JavaScript cannot read it.
+- The session is the API-owned opaque cookie (`__Host-arasya_session` in production, `arasya_session` in tests), set host-only on `api.arasyahome.ro` with `Secure`, `HttpOnly` and `SameSite=Lax`. JavaScript cannot read it.
 - Every request is made by `src/api/client.ts` with `credentials: "include"` and `cache: "no-store"`. No `Authorization` header is ever sent.
 - The CSRF token returned by `/auth/session`, `/auth/login` and `/auth/password` is kept in memory only and sent as `X-CSRF-Token` on mutations. It is forgotten on logout or session loss.
 - No authentication or authorization data is written to `localStorage`, `sessionStorage`, IndexedDB or cookies. The only browser-storage entry is the interface language, `arasya.b2b.locale` (`ro` or `tr`). Unit and browser tests enforce this.
