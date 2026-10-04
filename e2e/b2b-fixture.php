@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 // Builds a disposable database for the B2B real-API Chromium suite with the real Operations API code checked out
 // at ./operations-api (pinned in e2e/operations-api.ref), bootstraps the single protected root identity through
-// the real CLI service and creates two controlled identities through the real management API: one with B2B access
-// and one with Staff access only. It refuses any database whose name does not contain both "e2e" and "test", never
-// touches production and creates no orders.
+// the real CLI service and creates controlled identities through the real management API: one with B2B access and
+// a "B2B sales" role holding the four company permissions, and one with Staff access only. It refuses any database
+// whose name does not contain both "e2e" and "test", never touches production and creates no orders or companies.
 
 use Arasya\Operations\Application\Container;
 use Arasya\Operations\Database\Connection;
@@ -43,6 +43,9 @@ foreach ($seeds as $seed) {
 if ((int) $pdo->query("SELECT COUNT(*) FROM applications WHERE application_key = 'b2b' AND status = 'active'")->fetchColumn() !== 1) {
     throw new RuntimeException('The pinned Operations API does not register the B2B application (migration 008).');
 }
+if ((int) $pdo->query("SELECT COUNT(*) FROM permissions WHERE permission_key LIKE 'b2b.companies.%' AND role_grantable = 1")->fetchColumn() !== 4) {
+    throw new RuntimeException('The pinned Operations API does not provide the B2B company permissions (migration 009).');
+}
 
 $container = new Container($config, $pdo);
 $kernel = $container->kernel();
@@ -61,10 +64,14 @@ preg_match('/^arasya_session=([^;]+);/', $changed['headers']['Set-Cookie'], $mat
 $root = ['cookie' => rawurldecode($match[1]), 'csrf' => (string) $changed['body']['csrfToken']];
 
 $departmentId = (int) $pdo->query("SELECT department_id FROM departments WHERE status = 'active' ORDER BY department_id LIMIT 1")->fetchColumn();
-$create = static function (string $name, string $username, array $applications, array $stages) use ($call, $root, $departmentId): array {
+$salesRole = (int) $call('POST', '/management/roles', [
+    'name' => 'Vânzări B2B (E2E)', 'description' => null, 'authorityRank' => 200,
+    'permissions' => ['b2b.companies.view', 'b2b.companies.create', 'b2b.companies.update', 'b2b.companies.manage_status'],
+], $root)['body']['role']['id'];
+$create = static function (string $name, string $username, array $applications, array $stages, array $roles = []) use ($call, $root, $departmentId): array {
     $body = $call('POST', '/management/employees', [
         'displayName' => $name, 'username' => $username, 'departmentId' => $departmentId, 'positionTitle' => null, 'managerId' => null,
-        'applications' => $applications, 'roleIds' => [], 'stageIds' => $stages, 'status' => 'active',
+        'applications' => $applications, 'roleIds' => $roles, 'stageIds' => $stages, 'status' => 'active',
     ], $root)['body'];
     return ['id' => (string) $body['employee']['id'], 'username' => $username, 'name' => $name, 'temporaryPassword' => (string) $body['temporaryPassword']];
 };
@@ -72,6 +79,7 @@ $create = static function (string $name, string $username, array $applications, 
 echo json_encode([
     'origins' => ['b2b' => $b2bOrigin, 'admin' => $adminOrigin],
     'root' => ['username' => RootBootstrapService::ROOT_USERNAME, 'password' => $rootPassword],
-    'b2bUser' => $create('Elena Vânzări', 'elena.vanzari.e2e', ['b2b'], []),
+    'b2bUser' => $create('Elena Vânzări', 'elena.vanzari.e2e', ['b2b'], [], [$salesRole]),
+    'salesRoleId' => $salesRole,
     'staffUser' => $create('Mihai Atelier', 'mihai.atelier.e2e', ['staff'], ['waiting']),
 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), "\n";

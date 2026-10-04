@@ -77,7 +77,7 @@ test("a B2B-authorized identity enters the shell; no auth data is stored in the 
   const api = await mockApi(page);
   await login(page);
   await expect(page.getByRole("heading", { name: "Bun venit, Elena Vânzări." })).toBeVisible();
-  await expect(page.getByRole("navigation").getByRole("link")).toHaveText(["Pagina principală"]);
+  await expect(page.getByRole("navigation").getByRole("link")).toHaveText(["Pagina principală", "Companii"]);
   await expect(page.getByText(`Versiunea ${version}`)).toBeVisible();
   expect(api.state.requests).toEqual(["GET /auth/session", "POST /auth/login", "GET /b2b/access"]);
   expect(api.state.headers.every((headers) => !("authorization" in headers))).toBe(true);
@@ -152,7 +152,7 @@ test("a revoked session returns to login with a notice", async ({ page }) => {
 
 test("a direct reload of an unknown SPA route stays inside the authenticated shell", async ({ page }) => {
   await mockApi(page, { loggedIn: true });
-  await page.goto("/companii");
+  await page.goto("/pagina-necunoscuta");
   await expect(page.getByRole("heading", { name: "Pagina nu există" })).toBeVisible();
   await page.getByRole("button", { name: "Înapoi la pagina principală" }).click();
   await expect(page.getByRole("heading", { name: "Bun venit, Elena Vânzări." })).toBeVisible();

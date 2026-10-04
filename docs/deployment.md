@@ -18,7 +18,9 @@ Repository variable `VITE_B2B_API_BASE_URL` must be `https://api.arasyahome.ro`.
 
 ## Prerequisites
 
-Operations API 2.7.0 with migration 008 must be live, and the production `ARASYA_ALLOWED_ORIGINS` must contain exactly `https://staff.arasyahome.ro`, `https://dashboard.arasyahome.ro` and `https://b2b.arasyahome.ro`. `php bin/readiness.php` reports `iam_applications` OK and `cors_origin_b2b.arasyahome.ro` OK. Never deploy B2B before that.
+B2B 0.2.0 needs Operations API 2.8.0 with migrations 008 and 009 live (0.1.0 needed 2.7.0 and 008), and the production `ARASYA_ALLOWED_ORIGINS` must contain exactly `https://staff.arasyahome.ro`, `https://dashboard.arasyahome.ro` and `https://b2b.arasyahome.ro`. `php bin/readiness.php` reports `migrations`, `iam_applications`, `b2b_company_permissions` and `cors_origin_b2b.arasyahome.ro` OK. Never deploy a B2B version before the API it needs. `e2e/operations-api.ref` pins the API commit the real-API suite runs against.
+
+Rollback: `scripts/cpanel-rollback-b2b.sh --previous` returns to the previous verified release. B2B 0.1.0 keeps working against API 2.8.0 (it ignores the new endpoints), and API 2.8.0 can itself be rolled back to 2.7.0 while the additive migration 009 stays in place; B2B 0.2.0 must then be rolled back first, because its Companies screens need 2.8.0.
 
 ## Server layout
 

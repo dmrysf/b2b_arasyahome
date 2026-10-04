@@ -33,15 +33,25 @@ B2B is **not** an authentication system, a user or employee database, a producti
 | Production truth: operational orders, the `curtain-production@1` workflow, stages, owners, activity | Operations API, operated through Staff and supervised in the Dashboard |
 | Commerce status of Trendhome and OutletPerdele orders | The source stores; received inbound only |
 | B2B user interface | This repository |
-| Future wholesale data (companies, B2B orders, current accounts) | Future Operations API B2B module (see below) |
+| Wholesale companies, contacts, addresses, notes and company activity (0.2.0) | Operations API B2B module (`operations-api/src/B2B`, migration 009), separate from production, Staff, sources and IAM internals |
+| Future wholesale data (B2B orders, current accounts) | Future Operations API B2B modules (see below) |
 
-B2B never keeps a copy of production state and never writes production data. Foundation 0.1.0 sends no order anywhere and creates no placeholder orders.
+B2B never keeps a copy of production state and never writes production data. No B2B version sends an order anywhere or creates placeholder orders.
+
+## Companies V1 (0.2.0)
+
+```
+B2B frontend  ->  Operations API  ->  Central IAM (session, b2b.access, company permissions)
+                                  ->  B2B company domain (b2b_companies, contacts, addresses, activity)
+```
+
+The company domain is the foundation every later module attaches to: the stable `company_uuid`, the immutable server-generated code, the fiscal identity (country + normalized tax identifier, unique), multiple contacts and typed addresses, internal notes and an immutable B2B activity history. Company endpoints need `b2b.access` plus a narrow role-grantable permission (`b2b.companies.view`, `.create`, `.update`, `.manage_status`). See [companies.md](companies.md).
 
 ## B2B domain (future)
 
-The future B2B scope covers wholesale companies and their profiles, company order history, current accounts (debit and credit tracking) and payments, a classic order builder with manual product codes, curtain and drapery order lines with measurements, quantities, meters, pricing and discounts, project orders with property, floor, room and window structure, a Visual Project Order Builder and later a premium interactive 3D presentation, and eventually inventory integration.
+The future B2B scope (beyond Companies V1) covers company order history, current accounts (debit and credit tracking) and payments, a classic order builder with manual product codes, curtain and drapery order lines with measurements, quantities, meters, pricing and discounts, project orders with property, floor, room and window structure, a Visual Project Order Builder and later a premium interactive 3D presentation, and eventually inventory integration.
 
-None of this exists in 0.1.0. No B2B business table, API or screen has been created.
+None of this exists yet. The only B2B business tables are the Companies V1 tables; there is no order, account, product or inventory table, API or screen.
 
 ### Future manual order line
 
@@ -59,12 +69,12 @@ A manual order line will keep snapshots so a later catalogue change never rewrit
 | `unit_price`, `discount`, `line_total` | Commercial values at order time |
 | `inventory_product_id` | Nullable link to the future central inventory product |
 
-This is documentation only; the schema will be designed in its own milestone.
+This is documentation only; the schema will be designed in its own milestone. A B2B order will reference `company_uuid` and snapshot the company name, tax identifier, selected address and selected contact at order time, so later company edits never rewrite historical orders.
 
 ### Two order experiences
 
 1. **Classic / Quick Order**: a fast form of order lines.
-2. **Visual Project Order Builder**: the property type (house, villa, hotel, hospital, restaurant, office, cafe and others), its floors, rooms and windows, each window with its own dimensions, product codes and curtain or drapery selection; an interactive visual representation with zoom, pan, rotate and a detailed single-window view, fast enough and polished enough to present to customers. A premium 3D experience comes after that. No 3D library is installed in 0.1.0.
+2. **Visual Project Order Builder**: the property type (house, villa, hotel, hospital, restaurant, office, cafe and others), its floors, rooms and windows, each window with its own dimensions, product codes and curtain or drapery selection; an interactive visual representation with zoom, pan, rotate and a detailed single-window view, fast enough and polished enough to present to customers. A premium 3D experience comes after that. No 3D library is installed.
 
 ## Future Operations integration
 
@@ -80,8 +90,8 @@ Staff
 curtain-production@1
 ```
 
-The source key `b2b` is reserved for that integration. B2B will submit confirmed orders to the Operations API, which will create the operational order and run it through the canonical `curtain-production@1` workflow exactly like Trendhome and OutletPerdele orders. Staff remains where stages change, the Dashboard where production is supervised. B2B will read production progress from the Operations API instead of storing it. This integration is not implemented in 0.1.0.
+The source key `b2b` is reserved for that integration. B2B will submit confirmed orders to the Operations API, which will create the operational order and run it through the canonical `curtain-production@1` workflow exactly like Trendhome and OutletPerdele orders. Staff remains where stages change, the Dashboard where production is supervised. B2B will read production progress from the Operations API instead of storing it. This integration is not implemented yet.
 
 ## Future inventory relationship
 
-Today a product code will be typed manually. Later it will resolve to a product in a central Arasya inventory system. The order line therefore reserves a nullable `inventory_product_id`: lines placed before inventory exists stay valid with only their snapshots, and lines placed afterwards link to the inventory product while still keeping their snapshots. No inventory system or inventory API exists yet, and B2B will not invent one.
+Today a product code will be typed manually. Later it will resolve to a product in a central Arasya inventory system. The order line therefore reserves a nullable `inventory_product_id`: lines placed before inventory exists stay valid with only their snapshots, and lines placed afterwards link to the inventory product while still keeping their snapshots. No inventory system or inventory API exists yet, and B2B will not invent one. The company domain is independent of inventory and never depends on it.

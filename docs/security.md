@@ -16,6 +16,14 @@ B2B introduces no security model of its own. It uses the Operations API's Centra
 - Authorization is not cached. While B2B is open it re-reads the session and the gate when the tab becomes visible and at least once a minute, and any request that returns `APPLICATION_ACCESS_DENIED`, `PASSWORD_CHANGE_REQUIRED`, `SESSION_EXPIRED` or `ACCOUNT_INACTIVE` re-reads the session immediately. Deactivation revokes the session on the server.
 - The access-denied screen does not name permissions or internal identifiers. Server error text is never displayed; errors are shown from localized codes.
 
+## Companies data (0.2.0)
+
+- Company endpoints need the session, an active identity, `b2b.access` and a specific company permission (`b2b.companies.view`, `.create`, `.update` or `.manage_status`). Mutations also need the exact origin, the CSRF token and an `Idempotency-Key`. Hiding a button is a convenience; the server decides.
+- Company, contact and address data and internal notes are kept in memory only while a page is open. They are never written to browser storage, never logged by the frontend, and never shown in error text.
+- The Operations API exposes company data only through `/b2b/companies`. It is not part of Staff routes, production overviews, order lists or details, source health, `/health` or the IAM audit. Its activity history stores changed field names, never values.
+- Company website links open with `rel="noopener noreferrer nofollow"`; the API accepts only http and https URLs.
+- Validation and conflicts are neutral (required, invalid, duplicate tax identifier, concurrent change). There is no risk scoring or payment labelling.
+
 ## Origin and CORS
 
 - The Operations API accepts credentialed requests only from the exact origins in `ARASYA_ALLOWED_ORIGINS`. Production lists `https://staff.arasyahome.ro`, `https://dashboard.arasyahome.ro` and `https://b2b.arasyahome.ro`; there is no wildcard and no subdomain pattern.
@@ -37,6 +45,6 @@ The hosting provider injects `https://img1.wsimg.com/traffic-assets/js/tccl.min.
 - Releases are checksummed (`SHA256SUMS`), carry their source commit in `release.json` and are validated again on the server before activation and before rollback.
 - CI checks out the private Operations API with a repository-scoped, read-only deploy key (`STAFF_REPO_DEPLOY_KEY`), never with a personal token.
 
-## Out of scope for 0.1.0
+## Out of scope
 
-B2B Foundation creates and mutates no production orders, sends nothing to Trendhome or any store, and does not change the inbound-only source rule of the Operations API.
+B2B creates and mutates no production orders, sends nothing to Trendhome or any store, and does not change the inbound-only source rule of the Operations API. Companies V1 creates no B2B orders and holds no financial data.

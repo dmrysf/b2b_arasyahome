@@ -7,6 +7,10 @@ import { useI18n } from "./i18n/context";
 import { Shell } from "./layout/Shell";
 import { ChangePasswordPage, LoginPage, NoAccessPage } from "./pages/AuthPages";
 import { HomePage, NotFoundPage } from "./pages/HomePage";
+import { CompaniesPage } from "./companies/CompaniesPage";
+import { CompanyCreatePage } from "./companies/CompanyCreatePage";
+import { CompanyDetailPage } from "./companies/CompanyDetailPage";
+import { companiesRoute, companyPath } from "./companies/shared";
 
 /** The authorization re-check interval while B2B is open; authorization is never cached beyond it. */
 export const ACCESS_RECHECK_MS = 60_000;
@@ -30,6 +34,8 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   const { pathname, navigate } = usePathname();
   const { t, problem } = useI18n();
   const [state, setState] = useState<AppState>({ kind: "loading" });
+  // A one-shot success message carried to the next page (for example "company created").
+  const [flash, setFlash] = useState<{ path: string; message: string } | null>(null);
 
   const restore = useCallback((notice?: ApiError) => { void restoreSession(api, notice).then(setState); }, [api]);
   const accept = useCallback(async (session: Promise<Session>) => { setState(await resolveSession(api, await session)); }, [api]);
@@ -73,9 +79,27 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   if (state.kind === "password") return <ChangePasswordPage displayName={state.session.employee.displayName} onLogout={() => { void logout(); }} onChange={(current, next) => accept(api.changePassword(current, next))} />;
   if (state.kind === "no-access") return <NoAccessPage displayName={state.session.employee.displayName} onLogout={() => { void logout(); }} />;
 
+  const permissions = state.access.permissions;
+  const route = companiesRoute(pathname);
+  const canView = permissions.includes("b2b.companies.view");
+  const canCreate = permissions.includes("b2b.companies.create");
+  const go = (path: string) => {
+    if (flash && flash.path !== path) setFlash(null);
+    navigate(path);
+  };
+  let page;
+  if (pathname === "/") page = <HomePage access={state.access} session={state.session} navigate={go} />;
+  else if (route?.kind === "create" && canCreate) {
+    page = <CompanyCreatePage api={api} canView={canView} navigate={go} onCreated={(id) => { setFlash({ path: companyPath(id), message: t.companies.success.created }); navigate(companyPath(id)); }} />;
+  } else if (route?.kind === "detail" && canView) {
+    page = <CompanyDetailPage key={route.id} api={api} id={route.id} navigate={go} flash={flash?.path === pathname ? flash.message : null} />;
+  } else if (route) {
+    // The list explains what is missing when the identity may not view companies.
+    page = <CompaniesPage api={api} canView={canView} canCreate={canCreate} navigate={go} />;
+  } else page = <NotFoundPage onHome={() => go("/")} />;
   return (
-    <Shell access={state.access} pathname={pathname} navigate={navigate} onLogout={() => { void logout(); }}>
-      {pathname === "/" ? <HomePage access={state.access} session={state.session} /> : <NotFoundPage onHome={() => navigate("/")} />}
+    <Shell access={state.access} pathname={pathname} navigate={go} onLogout={() => { void logout(); }}>
+      {page}
     </Shell>
   );
 }

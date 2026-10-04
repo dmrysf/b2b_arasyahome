@@ -1,12 +1,11 @@
+import {
+  mapActivity, mapCompanyDetail, mapCompanyList, mapMutation, COMPANY_PERMISSIONS,
+  type AddressFields, type CompanyFields, type CompanyPermission, type ContactFields, type StatusFilter,
+} from "./companies";
+import { ApiError } from "./errors";
 import type { B2bAccess, Session, SessionEmployee } from "./types";
 
-/** A typed API failure. `code` is the server error code; transport problems use NETWORK_UNAVAILABLE. */
-export class ApiError extends Error {
-  constructor(public readonly code: string, public readonly status: number, message?: string) {
-    super(message ?? code);
-    this.name = "ApiError";
-  }
-}
+export { ApiError } from "./errors";
 
 /** Codes after which the app must treat the central session as gone. */
 export const SESSION_CODES = new Set(["SESSION_EXPIRED", "NO_SESSION", "AUTHENTICATION_REQUIRED", "ACCOUNT_INACTIVE"]);
@@ -51,10 +50,22 @@ function mapAccess(value: unknown): B2bAccess {
   if (raw.application !== "b2b" || typeof raw.authorizationVersion !== "number" || typeof employee.displayName !== "string" || typeof employee.username !== "string" || typeof employee.isRoot !== "boolean") {
     throw new ApiError("INVALID_RESPONSE", 502);
   }
-  return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion };
+  // Only known module permissions are kept; an older API without the field means "none".
+  const permissions = Array.isArray(raw.permissions)
+    ? COMPANY_PERMISSIONS.filter((permission) => (raw.permissions as unknown[]).includes(permission))
+    : [];
+  return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions };
 }
 
+export type CompanyQuery = { search?: string; status?: StatusFilter; country?: string; cursor?: string | null; limit?: number };
+
+/** One B2B mutation attempt. The same key is reused for a retry of the same change, so it is applied once. */
+export type Idempotent = { idempotencyKey: string };
+
+const segment = (id: string) => encodeURIComponent(id);
+
 export type B2bApi = ReturnType<typeof createApi>;
+export type { CompanyPermission };
 
 /**
  * The only way B2B talks to the Operations API. Every request carries the API-owned HttpOnly session cookie
@@ -65,11 +76,12 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
   let csrfToken = "";
   const listeners = new Set<Listener>();
 
-  async function request<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  async function request<T>(path: string, init: { method?: string; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
     const method = init.method ?? "GET";
     const headers: Record<string, string> = { Accept: "application/json" };
     if (init.body !== undefined) headers["Content-Type"] = "application/json";
     if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+    if (init.idempotencyKey) headers["Idempotency-Key"] = init.idempotencyKey;
     let response: Response;
     try {
       response = await fetchImpl(new URL(path, baseUrl).toString(), { method, headers, credentials: "include", cache: "no-store", body: init.body === undefined ? undefined : JSON.stringify(init.body) });
@@ -79,9 +91,9 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     let payload: unknown = null;
     try { payload = await response.json(); } catch { /* handled below */ }
     if (!response.ok) {
-      const error = payload && typeof payload === "object" ? (payload as { error?: { code?: unknown } }).error : undefined;
+      const error = payload && typeof payload === "object" ? (payload as { error?: { code?: unknown; details?: unknown } }).error : undefined;
       const code = typeof error?.code === "string" ? error.code : response.status >= 500 ? "SERVER_ERROR" : "REQUEST_FAILED";
-      const failure = new ApiError(code, response.status);
+      const failure = new ApiError(code, response.status, undefined, error?.details);
       if (SESSION_CODES.has(code)) csrfToken = "";
       // The login, session and password calls report their own outcome; every other request tells the app.
       if (path !== "/auth/login" && path !== "/auth/session" && path !== "/auth/password" && (SESSION_CODES.has(code) || ACCESS_CHANGED_CODES.has(code))) {
@@ -117,5 +129,37 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     },
     /** The server-side B2B gate; it fails with APPLICATION_ACCESS_DENIED once B2B access is removed. */
     access: async () => mapAccess(await request<unknown>("/b2b/access")),
+
+    listCompanies: async (query: CompanyQuery = {}) => {
+      const params = new URLSearchParams();
+      if (query.search?.trim()) params.set("search", query.search.trim());
+      if (query.status) params.set("status", query.status);
+      if (query.country) params.set("country", query.country);
+      if (query.cursor) params.set("cursor", query.cursor);
+      if (query.limit) params.set("limit", String(query.limit));
+      const suffix = params.toString();
+      return mapCompanyList(await request<unknown>(`/b2b/companies${suffix ? `?${suffix}` : ""}`));
+    },
+    getCompany: async (id: string) => mapCompanyDetail(await request<unknown>(`/b2b/companies/${segment(id)}`)),
+    companyActivity: async (id: string, cursor?: string | null) =>
+      mapActivity(await request<unknown>(`/b2b/companies/${segment(id)}/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`)),
+    createCompany: async (fields: CompanyFields & { contact?: ContactFields | null; address?: AddressFields | null }, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>("/b2b/companies", { method: "POST", body: fields, idempotencyKey })),
+    updateCompany: async (id: string, fields: CompanyFields, expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(id)}`, { method: "PUT", body: { ...fields, expectedVersion }, idempotencyKey })),
+    setCompanyStatus: async (id: string, status: "active" | "inactive", expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(id)}/${status === "active" ? "reactivate" : "deactivate"}`, { method: "POST", body: { expectedVersion }, idempotencyKey })),
+    createContact: async (companyId: string, fields: ContactFields, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(companyId)}/contacts`, { method: "POST", body: fields, idempotencyKey })),
+    updateContact: async (companyId: string, contactId: string, fields: ContactFields, expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(companyId)}/contacts/${segment(contactId)}`, { method: "PUT", body: { ...fields, expectedVersion }, idempotencyKey })),
+    setContactStatus: async (companyId: string, contactId: string, status: "active" | "inactive", expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(companyId)}/contacts/${segment(contactId)}/${status === "active" ? "reactivate" : "deactivate"}`, { method: "POST", body: { expectedVersion }, idempotencyKey })),
+    createAddress: async (companyId: string, fields: AddressFields, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(companyId)}/addresses`, { method: "POST", body: fields, idempotencyKey })),
+    updateAddress: async (companyId: string, addressId: string, fields: AddressFields, expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(companyId)}/addresses/${segment(addressId)}`, { method: "PUT", body: { ...fields, expectedVersion }, idempotencyKey })),
+    setAddressStatus: async (companyId: string, addressId: string, status: "active" | "inactive", expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapMutation(await request<unknown>(`/b2b/companies/${segment(companyId)}/addresses/${segment(addressId)}/${status === "active" ? "reactivate" : "deactivate"}`, { method: "POST", body: { expectedVersion }, idempotencyKey })),
   };
 }

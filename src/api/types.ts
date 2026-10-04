@@ -11,9 +11,12 @@ export type SessionEmployee = {
 
 export type Session = { employee: SessionEmployee; expiresAt: string };
 
-/** GET /b2b/access: the server-side B2B application gate. */
+import type { CompanyPermission } from "./companies";
+
+/** GET /b2b/access: the server-side B2B application gate, with the module permissions usable right now. */
 export type B2bAccess = {
   application: "b2b";
   employee: { displayName: string; username: string; isRoot: boolean };
   authorizationVersion: number;
+  permissions: CompanyPermission[];
 };

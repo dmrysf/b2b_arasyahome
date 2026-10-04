@@ -1,11 +1,14 @@
 import type { Page, Route } from "@playwright/test";
+import { createCompanyStore } from "./mock-companies";
 
 export const API = "https://api.arasyahome.ro";
 
-export type MockOptions = { applications?: string[]; mustChangePassword?: boolean; loggedIn?: boolean };
+export const ALL_COMPANY_PERMISSIONS = ["b2b.companies.view", "b2b.companies.create", "b2b.companies.update", "b2b.companies.manage_status"];
+
+export type MockOptions = { applications?: string[]; mustChangePassword?: boolean; loggedIn?: boolean; permissions?: string[] };
 
 /**
- * An in-memory double of the Central IAM endpoints B2B uses (Operations API 2.7.0 shapes). It answers through
+ * An in-memory double of the Central IAM and B2B Companies endpoints B2B uses (Operations API 2.8.0 shapes). It answers through
  * page.route, so the smoke suite needs no PHP, database or network, and records every request for assertions.
  */
 export async function mockApi(page: Page, options: MockOptions = {}) {
@@ -16,6 +19,7 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
     /** Simulates an administrator removing B2B access in Central IAM. */
     accessRemoved: false,
     authorizationVersion: 4,
+    permissions: options.permissions ?? ALL_COMPANY_PERMISSIONS,
     requests: [] as string[],
     headers: [] as Array<Record<string, string>>,
   };
@@ -25,6 +29,7 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
     applications: state.applications, roles: [], positionTitle: null, isRoot: false, mustChangePassword: state.mustChangePassword, authorizationVersion: state.authorizationVersion, locale: "ro",
   });
   const session = () => ({ employee: employee(), expiresAt: "2026-10-05T06:00:00+00:00", csrfToken: "csrf-smoke" });
+  const companies = createCompanyStore(state.permissions);
   const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   const fail = (route: Route, code: string, status: number) => json(route, { error: { code, message: "English server text", requestId: "r" } }, status);
 
@@ -35,6 +40,7 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
     state.requests.push(`${method} ${path}`);
     state.headers.push(await request.allHeaders());
     const body = request.postData() ? JSON.parse(request.postData() as string) as Record<string, string> : {};
+    const url = new URL(request.url());
     if (method === "POST" && path === "/auth/login") {
       if (body.password !== "parola-corecta") return fail(route, "INVALID_CREDENTIALS", 401);
       state.loggedIn = true;
@@ -47,13 +53,19 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
     if (method === "GET" && path === "/b2b/access") {
       if (state.mustChangePassword) return fail(route, "PASSWORD_CHANGE_REQUIRED", 403);
       if (state.accessRemoved || !state.applications.includes("b2b")) return fail(route, "APPLICATION_ACCESS_DENIED", 403);
-      return json(route, { application: "b2b", employee: { displayName: "Elena Vânzări", username: "elena.vanzari", isRoot: false }, authorizationVersion: state.authorizationVersion });
+      return json(route, { application: "b2b", employee: { displayName: "Elena Vânzări", username: "elena.vanzari", isRoot: false }, authorizationVersion: state.authorizationVersion, permissions: state.permissions });
+    }
+    if (path === "/b2b/companies" || path.startsWith("/b2b/companies/")) {
+      if (state.accessRemoved) return fail(route, "APPLICATION_ACCESS_DENIED", 403);
+      const reply = companies.handle(method, path, url.searchParams, body, (await request.allHeaders())["idempotency-key"]);
+      return json(route, reply.body, reply.status);
     }
     return fail(route, "NOT_FOUND", 404);
   });
 
   return {
     state,
+    companies,
     removeAccess() { state.accessRemoved = true; state.applications = state.applications.filter((key) => key !== "b2b"); state.authorizationVersion += 1; },
   };
 }

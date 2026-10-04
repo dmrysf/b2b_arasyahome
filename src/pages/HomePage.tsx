@@ -1,9 +1,10 @@
 import type { B2bAccess, Session } from "../api/types";
 import { useI18n } from "../i18n/context";
+import { COMPANIES_PATH } from "../companies/shared";
 import { PLANNED_MODULES } from "../layout/modules";
 
-/** The Foundation landing page: the identity B2B received from Central IAM and the planned modules. No business data. */
-export function HomePage({ access, session }: { access: B2bAccess; session: Session }) {
+/** The landing page: the identity B2B received from Central IAM and the modules. No business data. */
+export function HomePage({ access, session, navigate }: { access: B2bAccess; session: Session; navigate: (path: string) => void }) {
   const { t, dateTime } = useI18n();
   const h = t.home;
   return (
@@ -31,6 +32,12 @@ export function HomePage({ access, session }: { access: B2bAccess; session: Sess
           <h2 id="modules-title">{h.modulesTitle}</h2>
           <p className="muted">{h.modulesBody}</p>
           <ul className="module-list">
+            {access.permissions.length > 0 && (
+              <li>
+                <a className="link" href={COMPANIES_PATH} onClick={(event) => { event.preventDefault(); navigate(COMPANIES_PATH); }}>{t.shell.modules.companies}</a>
+                <span className="badge badge-success">{h.available}</span>
+              </li>
+            )}
             {PLANNED_MODULES.map((key) => <li key={key}><span>{t.shell.modules[key]}</span><span className="soon">{t.shell.planned}</span></li>)}
           </ul>
         </section>

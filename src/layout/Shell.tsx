@@ -3,11 +3,13 @@ import type { B2bAccess } from "../api/types";
 import { useI18n } from "../i18n/context";
 import { BrandMark, LocaleSwitcher } from "../components/ui";
 import { B2B_VERSION } from "../version";
+import { COMPANIES_PATH } from "../companies/shared";
 import { PLANNED_MODULES } from "./modules";
 
 export function Shell({ access, pathname, navigate, onLogout, children }: { access: B2bAccess; pathname: string; navigate: (path: string) => void; onLogout: () => void; children: ReactNode }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const inCompanies = pathname === COMPANIES_PATH || pathname.startsWith(`${COMPANIES_PATH}/`);
   return (
     <div className={`shell ${open ? "nav-open" : ""}`}>
       <aside className="sidebar">
@@ -15,6 +17,10 @@ export function Shell({ access, pathname, navigate, onLogout, children }: { acce
         <nav aria-label={t.shell.navigation}>
           <a href="/" className={pathname === "/" ? "active" : ""} aria-current={pathname === "/" ? "page" : undefined}
             onClick={(event) => { event.preventDefault(); setOpen(false); navigate("/"); }}>{t.shell.home}</a>
+          {access.permissions.length > 0 && (
+            <a href={COMPANIES_PATH} className={inCompanies ? "active" : ""} aria-current={inCompanies ? "page" : undefined}
+              onClick={(event) => { event.preventDefault(); setOpen(false); navigate(COMPANIES_PATH); }}>{t.shell.modules.companies}</a>
+          )}
           <p className="nav-section">{t.shell.planned}</p>
           <ul className="nav-planned">
             {PLANNED_MODULES.map((key) => (

@@ -2,7 +2,7 @@ import type { SessionEmployee } from "../src/api/types";
 
 export const API = "https://api.arasyahome.ro";
 
-/** The exact /auth/session employee shape of Operations API 2.7.0 (EmployeeSerializer::safe). */
+/** The exact /auth/session employee shape of Operations API 2.8.0 (EmployeeSerializer::safe). */
 export function sessionPayload(employee: Partial<SessionEmployee & { permissions: string[] }> = {}, csrfToken = "csrf-token-1") {
   return {
     employee: {
@@ -30,11 +30,15 @@ export function sessionPayload(employee: Partial<SessionEmployee & { permissions
   };
 }
 
-export function accessPayload(overrides: { displayName?: string; username?: string; isRoot?: boolean; authorizationVersion?: number } = {}) {
+export const ALL_COMPANY_PERMISSIONS = ["b2b.companies.view", "b2b.companies.create", "b2b.companies.update", "b2b.companies.manage_status"] as const;
+
+/** The exact GET /b2b/access shape of Operations API 2.8.0. */
+export function accessPayload(overrides: { displayName?: string; username?: string; isRoot?: boolean; authorizationVersion?: number; permissions?: string[] } = {}) {
   return {
     application: "b2b",
     employee: { displayName: overrides.displayName ?? "Elena Vânzări", username: overrides.username ?? "elena.vanzari", isRoot: overrides.isRoot ?? false },
     authorizationVersion: overrides.authorizationVersion ?? 4,
+    permissions: overrides.permissions ?? [...ALL_COMPANY_PERMISSIONS],
   };
 }
 
@@ -59,8 +63,8 @@ export function fakeFetch(handler: (call: Call) => { status?: number; body?: unk
   return { fetchImpl, calls };
 }
 
-export function apiError(code: string, status: number) {
-  return { status, body: { error: { code, message: "server-side English text that must never be shown", requestId: "req-1" } } };
+export function apiError(code: string, status: number, details?: unknown) {
+  return { status, body: { error: { code, message: "server-side English text that must never be shown", requestId: "req-1", ...(details === undefined ? {} : { details }) } } };
 }
 
 export const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&quot;/g, "\"").replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();

@@ -4,16 +4,17 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 type Identity = { id: string; username: string; name: string; temporaryPassword: string };
-type Fixture = { origins: { b2b: string; admin: string }; root: { username: string; password: string }; b2bUser: Identity; staffUser: Identity };
+type Fixture = { origins: { b2b: string; admin: string }; root: { username: string; password: string }; b2bUser: Identity; staffUser: Identity; salesRoleId: number };
 
 const fixture = JSON.parse(readFileSync(path.join(import.meta.dirname, ".real-api-fixture.json"), "utf8")) as Fixture;
 const API = "http://127.0.0.1:8789";
 const NEW_PASSWORD = { b2b: "vanzari e2e permanent passphrase 2026", staff: "atelier e2e permanent passphrase 2026" };
-const snapshot = () => JSON.parse(execFileSync("php", [path.join(import.meta.dirname, "db-snapshot.php")], { env: process.env, encoding: "utf8" })) as Record<string, number>;
+const snapshot = () => JSON.parse(execFileSync("php", [path.join(import.meta.dirname, "db-snapshot.php")], { env: process.env, encoding: "utf8" })) as Record<string, number | string>;
+const production = (counts: Record<string, number | string>) => Object.fromEntries(Object.entries(counts).filter(([key]) => key !== "b2b_companies"));
 
 test.describe.configure({ mode: "serial" });
 
-let productionBefore: Record<string, number>;
+let productionBefore: Record<string, number | string>;
 let admin: APIRequestContext;
 let adminCsrf = "";
 const browserRequests: string[] = [];
@@ -23,6 +24,23 @@ async function adminCall(method: "PUT" | "POST", url: string, data?: unknown) {
   const response = await admin.fetch(`${API}${url}`, { method, data, headers: { Origin: fixture.origins.admin, "X-CSRF-Token": adminCsrf } });
   expect(response.status(), `${method} ${url}`).toBe(200);
   return response.json();
+}
+
+type CompanyJson = { legalName: string; displayName: string | null; countryCode: string; taxIdentifier: string; vatNumber: string | null; registrationNumber: string | null; website: string | null; internalNotes: string | null; version: number };
+type AdminBody = { items: Array<{ id: string }>; company: CompanyJson; error: { code: string } };
+
+/** Root acting on B2B company endpoints from the second allowed origin: another employee's concurrent work. */
+async function adminFetch(method: "GET" | "PUT" | "POST", url: string, data?: unknown) {
+  const headers: Record<string, string> = { Origin: fixture.origins.admin, "X-CSRF-Token": adminCsrf };
+  if (method !== "GET") headers["Idempotency-Key"] = `e2e-admin-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const response = await admin.fetch(`${API}${url}`, { method, data, headers });
+  return { status: response.status(), body: await response.json() as AdminBody };
+}
+
+const welcome = (page: Page) => page.getByRole("heading", { name: `Bun venit, ${fixture.b2bUser.name}.` });
+
+async function noHorizontalOverflow(page: Page) {
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 }
 
 function track(page: Page) {
@@ -128,12 +146,130 @@ test("5 the exact B2B origin is accepted and hostile origins are rejected", asyn
   await context.dispose();
 });
 
-test("6 removing B2B access in Central IAM closes B2B on the next authorization check", async ({ page }) => {
+test("6 a sales employee creates a company with a server code, adds a contact and an address, edits it and sees the activity", async ({ page }) => {
+  track(page);
+  await login(page, fixture.b2bUser.username, NEW_PASSWORD.b2b);
+  await expect(welcome(page)).toBeVisible();
+  await page.getByRole("navigation").getByRole("link", { name: "Companii" }).click();
+  await expect(page.getByText("Nu există încă nicio companie activă.")).toBeVisible();
+  await page.getByRole("link", { name: "Companie nouă" }).click();
+  await page.getByLabel("Denumire legală").fill("Mobila Lux E2E SRL");
+  await page.getByLabel("CUI / Cod fiscal").fill("RO 12 345 678");
+  await page.getByRole("button", { name: "Creează compania" }).click();
+  await expect(page.getByText("Compania a fost creată.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mobila Lux E2E SRL" })).toBeVisible();
+  await expect(page.locator(".company-title .eyebrow")).toHaveText(/^B2B-\d{6}$/);
+  expect(page.url()).toMatch(/\/companii\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+
+  await page.getByRole("tab", { name: /Persoane de contact/ }).click();
+  await page.getByRole("button", { name: "Adaugă persoană de contact" }).click();
+  await page.getByLabel("Nume").fill("Ana Pop");
+  await page.getByLabel("E-mail").fill(" Ana.Pop@Mobila-Lux.RO ");
+  await page.getByLabel("Persoana de contact principală a companiei").check();
+  await page.getByRole("button", { name: "Salvează" }).click();
+  await expect(page.getByText("Persoana de contact a fost salvată.")).toBeVisible();
+  await expect(page.locator(".record-list li")).toContainText("ana.pop@mobila-lux.ro");
+  await expect(page.locator(".record-list li")).toContainText("Principală");
+
+  await page.getByRole("tab", { name: /Adrese/ }).click();
+  await page.getByRole("button", { name: "Adaugă adresă" }).click();
+  await page.getByRole("textbox", { name: "Adresă", exact: true }).fill("Str. Fabricii 12");
+  await page.getByLabel("Oraș").fill("Cluj-Napoca");
+  await page.getByRole("button", { name: "Salvează" }).click();
+  await expect(page.getByText("Adresa a fost salvată.")).toBeVisible();
+  await expect(page.locator(".record-list li")).toContainText("Facturare");
+
+  await page.getByRole("tab", { name: "Informații companie" }).click();
+  await page.getByRole("button", { name: "Editează" }).click();
+  await page.getByLabel("Denumire comercială").fill("Mobila Lux");
+  await page.getByRole("button", { name: "Salvează" }).click();
+  await expect(page.getByText("Modificările au fost salvate.")).toBeVisible();
+
+  await page.getByRole("tab", { name: "Activitate" }).click();
+  for (const entry of ["Companie creată", "Persoană de contact adăugată", "Adresă adăugată", "Date companie modificate", "Câmpuri: Denumire comercială"]) {
+    await expect(page.locator(".timeline")).toContainText(entry);
+  }
+  await expect(page.locator(".timeline")).not.toContainText("ana.pop@mobila-lux.ro");
+
+  await page.goto("/companii/noua");
+  await page.getByLabel("Denumire legală").fill("Alt Nume SRL");
+  await page.getByLabel("CUI / Cod fiscal").fill("12345678");
+  await page.getByRole("button", { name: "Creează compania" }).click();
+  await expect(page.getByText("Există deja o companie cu acest cod fiscal în această țară.", { exact: false })).toBeVisible();
+  await page.goto("/companii");
+  await page.getByLabel("Căutare").fill("cluj");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody tr")).toContainText("Ana Pop");
+});
+
+test("7 a stale edit is refused with 409; the employee keeps their work and saves on the current version", async ({ page }) => {
+  track(page);
+  const list = await adminFetch("GET", "/b2b/companies?search=Mobila");
+  expect(list.status).toBe(200);
+  const id = list.body.items[0].id;
+  const before = (await adminFetch("GET", `/b2b/companies/${id}`)).body.company;
+  await login(page, fixture.b2bUser.username, NEW_PASSWORD.b2b);
+  await expect(welcome(page)).toBeVisible();
+  await page.goto(`/companii/${id}`);
+  await page.getByRole("button", { name: "Editează" }).click();
+  await page.getByLabel("Nr. Registrul Comerțului").fill("J12/345/2019");
+  const fields = { legalName: before.legalName, displayName: before.displayName, countryCode: before.countryCode, taxIdentifier: before.taxIdentifier, vatNumber: before.vatNumber, registrationNumber: before.registrationNumber, website: "https://mobila-lux.ro", internalNotes: before.internalNotes };
+  expect((await adminFetch("PUT", `/b2b/companies/${id}`, { ...fields, expectedVersion: before.version })).status).toBe(200);
+  const stale = await adminFetch("PUT", `/b2b/companies/${id}`, { ...fields, website: null, expectedVersion: before.version });
+  expect([stale.status, stale.body.error.code]).toEqual([409, "COMPANY_CHANGED"]);
+  await page.getByRole("button", { name: "Salvează" }).click();
+  await expect(page.getByText("Înregistrarea a fost modificată între timp de altcineva.")).toBeVisible();
+  await expect(page.getByLabel("Nr. Registrul Comerțului")).toHaveValue("J12/345/2019");
+  await page.getByRole("button", { name: "Încarcă versiunea actuală" }).click();
+  await expect(page.getByLabel("Website")).toHaveValue("https://mobila-lux.ro");
+  await expect(page.getByLabel("Nr. Registrul Comerțului")).toHaveValue("J12/345/2019");
+  await page.getByRole("button", { name: "Salvează" }).click();
+  await expect(page.getByText("Modificările au fost salvate.")).toBeVisible();
+  const after = (await adminFetch("GET", `/b2b/companies/${id}`)).body.company;
+  expect([after.registrationNumber, after.website, after.version]).toEqual(["J12/345/2019", "https://mobila-lux.ro", before.version + 2]);
+});
+
+test("8 deactivate, filter inactive and reactivate; Turkish and a phone screen work", async ({ page }) => {
+  track(page);
+  const id = (await adminFetch("GET", "/b2b/companies?search=Mobila")).body.items[0].id;
+  await login(page, fixture.b2bUser.username, NEW_PASSWORD.b2b);
+  await expect(welcome(page)).toBeVisible();
+  await page.goto(`/companii/${id}`);
+  await page.getByRole("button", { name: "Dezactivează" }).click();
+  await page.getByRole("button", { name: "Confirmă dezactivarea" }).click();
+  await expect(page.getByText("Compania a fost dezactivată.")).toBeVisible();
+  await page.goto("/companii");
+  await expect(page.getByText("Nu există încă nicio companie activă.")).toBeVisible();
+  await page.getByLabel("Stare").selectOption("inactive");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody tr")).toContainText("Inactivă");
+  await page.locator("tbody tr a").click();
+  await page.getByRole("button", { name: "Reactivează" }).click();
+  await page.getByRole("button", { name: "Confirmă reactivarea" }).click();
+  await expect(page.getByText("Compania a fost reactivată.")).toBeVisible();
+  await page.getByRole("button", { name: "TR — Türkçe" }).click();
+  await expect(page.getByRole("tab", { name: "Şirket bilgileri" })).toBeVisible();
+  await page.getByRole("tab", { name: "Etkinlik" }).click();
+  await expect(page.locator(".timeline")).toContainText("Şirket pasif yapıldı");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noHorizontalOverflow(page);
+  await page.goto("/companii");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await noHorizontalOverflow(page);
+  await page.getByRole("button", { name: "RO — Română" }).click();
+});
+
+test("9 removing B2B access in Central IAM closes B2B on the next authorization check", async ({ page }) => {
   track(page);
   await adminCall("PUT", `/management/employees/${fixture.b2bUser.id}/applications`, { applications: ["b2b"] });
   await login(page, fixture.b2bUser.username, NEW_PASSWORD.b2b);
   await expect(page.getByRole("heading", { name: `Bun venit, ${fixture.b2bUser.name}.` })).toBeVisible();
   await adminCall("PUT", `/management/employees/${fixture.b2bUser.id}/applications`, { applications: [] });
+  const denied = await page.evaluate(async (api) => {
+    const response = await fetch(`${api}/b2b/companies`, { credentials: "include" });
+    return `${response.status} ${(await response.json()).error?.code}`;
+  }, API);
+  expect(denied).toBe("403 APPLICATION_ACCESS_DENIED");
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect(page.getByRole("heading", { name: "Nu aveți acces la aplicația B2B." })).toBeVisible();
   await page.reload();
@@ -143,7 +279,7 @@ test("6 removing B2B access in Central IAM closes B2B on the next authorization 
   await expect(page.getByRole("heading", { name: `Bun venit, ${fixture.b2bUser.name}.` })).toBeVisible();
 });
 
-test("7 deactivation in Central IAM ends the B2B session", async ({ page }) => {
+test("10 deactivation in Central IAM ends the B2B session", async ({ page }) => {
   track(page);
   await login(page, fixture.b2bUser.username, NEW_PASSWORD.b2b);
   await expect(page.getByRole("heading", { name: `Bun venit, ${fixture.b2bUser.name}.` })).toBeVisible();
@@ -153,7 +289,7 @@ test("7 deactivation in Central IAM ends the B2B session", async ({ page }) => {
   await adminCall("POST", `/management/employees/${fixture.b2bUser.id}/activate`);
 });
 
-test("8 root enters B2B through the existing root semantics, then logs out", async ({ page }) => {
+test("11 root enters B2B through the existing root semantics, then logs out", async ({ page }) => {
   track(page);
   await login(page, fixture.root.username, fixture.root.password);
   await expect(page.getByRole("heading", { name: /^Bun venit, / })).toBeVisible();
@@ -164,13 +300,15 @@ test("8 root enters B2B through the existing root semantics, then logs out", asy
   expect(after).toBe(401);
 });
 
-test("9 no production data was created or mutated and the browser talked only to B2B and the Operations API", () => {
-  expect(snapshot()).toEqual(productionBefore);
+test("12 no production data was created or mutated and the browser talked only to B2B and the Operations API", () => {
+  const after = snapshot();
+  expect(production(after)).toEqual(production(productionBefore));
   expect(productionBefore.operational_orders).toBe(0);
-  expect(productionBefore.b2b_tables).toBe(0);
+  expect([productionBefore.b2b_companies, after.b2b_companies]).toEqual([0, 1]);
   const origins = new Set(browserRequests.map((entry) => new URL(entry.split(" ")[1]).origin));
   expect([...origins].sort()).toEqual([API, fixture.origins.b2b].sort());
   const apiRoutes = new Set(browserRequests.filter((entry) => entry.includes(API)).map((entry) => entry.replace(API, "")));
-  for (const route of apiRoutes) expect(route, route).toMatch(/^(GET|POST|OPTIONS) \/(auth\/(session|login|logout|password)|b2b\/access|orders\/mine|management\/(me|orders))$/);
-  expect([...apiRoutes].filter((route) => route.startsWith("POST") && !route.includes("/auth/"))).toEqual([]);
+  const company = "b2b\\/companies(\\/[0-9a-f-]{36}(\\/(activity|deactivate|reactivate|(contacts|addresses)(\\/[0-9a-f-]{36}(\\/(deactivate|reactivate))?)?))?)?";
+  for (const route of apiRoutes) expect(route, route).toMatch(new RegExp(`^(GET|POST|PUT|OPTIONS) \\/(auth\\/(session|login|logout|password)|b2b\\/access|${company}|orders\\/mine|management\\/(me|orders))$`));
+  expect([...apiRoutes].filter((route) => /^(POST|PUT) /.test(route) && !route.includes("/auth/") && !route.includes("/b2b/companies"))).toEqual([]);
 });
