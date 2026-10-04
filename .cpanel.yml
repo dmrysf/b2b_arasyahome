@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - B2B_DEPLOY_PATH="$HOME/public_html/b2b.arasyahome.ro" B2B_RELEASE_STORAGE_PATH="$HOME/arasya-b2b-releases" /bin/bash ./scripts/cpanel-deploy.sh
