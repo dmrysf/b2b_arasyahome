@@ -71,7 +71,7 @@ export function OrderPage({ api, id, companyId, capabilities, canCompanyView, na
 
   if (e.loading) return <p role="status">{o.loading}</p>;
   if (id && !e.detail) return <p role="alert">{problem(e.error)}</p>;
-  if (!id && !e.editable) return <section className="card"><h1>{o.noCreate}</h1></section>;
+  if (!id && !e.editable && e.notice !== "createdNoView") return <section className="card"><h1>{o.noCreate}</h1></section>;
   const order = e.detail?.order;
   return <form className="page page-wide order-page" ref={editor} aria-label={o.workstation} onSubmit={event => event.preventDefault()}>
     <header className="page-header">

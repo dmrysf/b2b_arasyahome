@@ -2,6 +2,20 @@ import {expect,test} from '@playwright/test';
 import {mockApi,API} from './mock-api';
 import { emptyLine, emptyOrder, orderFields } from '../src/orders/model';
 const perms=['b2b.companies.view','b2b.orders.view','b2b.orders.create','b2b.orders.update','b2b.orders.manage_status'];
+test('create-only access confirms the saved reference without revealing detail or offering a second submit',async({page})=>{
+ const api=await mockApi(page,{loggedIn:true,permissions:['b2b.companies.view','b2b.orders.create']});
+ const companyId=api.companies.seed({legalName:'Restricted Client SRL',taxIdentifier:'1234'});
+ await page.goto(`/comenzi/noua?companyId=${companyId}`);
+ await page.getByRole('button',{name:'Adaugă linie'}).click();
+ await page.getByLabel('Cod produs 1',{exact:true}).fill('LIMITED');
+ await page.getByRole('button',{name:'Salvează ciorna',exact:true}).click();
+ await expect(page.getByText('Ciorna a fost creată. Nu aveți permisiunea de a vedea detaliile.')).toBeVisible();
+ await expect(page.getByLabel('Cod produs 1',{exact:true})).toBeDisabled();
+ await expect(page.getByRole('button',{name:'Salvează ciorna',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'Crearea necesită permisiunea pentru comenzi și vizualizarea companiilor.'})).toHaveCount(0);
+ expect(api.orders.orders).toHaveLength(1);
+ expect(api.state.requests.some(r=>r.startsWith('GET /b2b/orders/'))).toBe(false);
+});
 test('classic order saves, finalizes, duplicates and shows exact server totals in both languages',async({page})=>{
  const api=await mockApi(page,{loggedIn:true,permissions:perms}); const companyId=api.companies.seed({legalName:'Client SRL',taxIdentifier:'1234'});
  await page.goto(`/comenzi/noua?companyId=${companyId}`);
