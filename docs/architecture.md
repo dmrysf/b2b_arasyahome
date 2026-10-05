@@ -34,9 +34,9 @@ B2B is **not** an authentication system, a user or employee database, a producti
 | Commerce status of Trendhome and OutletPerdele orders | The source stores; received inbound only |
 | B2B user interface | This repository |
 | Wholesale companies, contacts, addresses, notes and company activity (0.2.0) | Operations API B2B module (`operations-api/src/B2B`, migration 009), separate from production, Staff, sources and IAM internals |
-| Future wholesale data (B2B orders, current accounts) | Future Operations API B2B modules (see below) |
+| Commercial orders, line snapshots/pricing and order activity (0.3.0) | Operations API B2B module (migration 010), isolated from production; see [Classic Orders](classic-orders.md) |
 
-B2B never keeps a copy of production state and never writes production data. No B2B version sends an order anywhere or creates placeholder orders.
+B2B never keeps a copy of production state and never writes production data. Classic V1 finalization is commercial only; it sends nothing to Staff or source commerce.
 
 ## Companies V1 (0.2.0)
 
@@ -49,9 +49,9 @@ The company domain is the foundation every later module attaches to: the stable 
 
 ## B2B domain (future)
 
-The future B2B scope (beyond Companies V1) covers company order history, current accounts (debit and credit tracking) and payments, a classic order builder with manual product codes, curtain and drapery order lines with measurements, quantities, meters, pricing and discounts, project orders with property, floor, room and window structure, a Visual Project Order Builder and later a premium interactive 3D presentation, and eventually inventory integration.
+Beyond Classic V1, future scope covers current accounts (debit/credit tracking) and payments, a visual project builder and inventory linkage. These are not implemented by 0.3.0.
 
-None of this exists yet. The only B2B business tables are the Companies V1 tables; there is no order, account, product or inventory table, API or screen.
+Classic Orders V1 and company order history now exist in 0.3.0. Current accounts/payments, visual projects and catalog/inventory linkage remain future scope.
 
 ### Future manual order line
 

@@ -17,10 +17,12 @@ export function Shell({ access, pathname, navigate, onLogout, children }: { acce
         <nav aria-label={t.shell.navigation}>
           <a href="/" className={pathname === "/" ? "active" : ""} aria-current={pathname === "/" ? "page" : undefined}
             onClick={(event) => { event.preventDefault(); setOpen(false); navigate("/"); }}>{t.shell.home}</a>
-          {access.permissions.length > 0 && (
+          {access.permissions.some(p => p.startsWith("b2b.companies.")) && (
             <a href={COMPANIES_PATH} className={inCompanies ? "active" : ""} aria-current={inCompanies ? "page" : undefined}
               onClick={(event) => { event.preventDefault(); setOpen(false); navigate(COMPANIES_PATH); }}>{t.shell.modules.companies}</a>
           )}
+          {access.permissions.some(p => p.startsWith("b2b.orders.")) && <a href="/comenzi" className={pathname.startsWith("/comenzi") ? "active" : ""}
+            aria-current={pathname.startsWith("/comenzi") ? "page" : undefined} onClick={event => { event.preventDefault(); setOpen(false); navigate("/comenzi"); }}>{t.shell.modules.orders}</a>}
           <p className="nav-section">{t.shell.planned}</p>
           <ul className="nav-planned">
             {PLANNED_MODULES.map((key) => (

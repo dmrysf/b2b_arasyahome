@@ -18,5 +18,5 @@ export type B2bAccess = {
   application: "b2b";
   employee: { displayName: string; username: string; isRoot: boolean };
   authorizationVersion: number;
-  permissions: CompanyPermission[];
+  permissions: (CompanyPermission | import("./orders").OrderPermission)[];
 };

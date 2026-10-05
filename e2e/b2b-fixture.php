@@ -76,10 +76,16 @@ $create = static function (string $name, string $username, array $applications, 
     return ['id' => (string) $body['employee']['id'], 'username' => $username, 'name' => $name, 'temporaryPassword' => (string) $body['temporaryPassword']];
 };
 
+$orderRole = (int) $call('POST', '/management/roles', [
+    'name' => 'Comenzi B2B (E2E)', 'description' => null, 'authorityRank' => 200,
+    'permissions' => ['b2b.companies.view', 'b2b.orders.view', 'b2b.orders.create', 'b2b.orders.update', 'b2b.orders.manage_status'],
+], $root)['body']['role']['id'];
+
 echo json_encode([
     'origins' => ['b2b' => $b2bOrigin, 'admin' => $adminOrigin],
     'root' => ['username' => RootBootstrapService::ROOT_USERNAME, 'password' => $rootPassword],
     'b2bUser' => $create('Elena Vânzări', 'elena.vanzari.e2e', ['b2b'], [], [$salesRole]),
     'salesRoleId' => $salesRole,
+    'orderUser' => $create('Ana Comenzi', 'ana.comenzi.e2e', ['b2b'], [], [$orderRole]),
     'staffUser' => $create('Mihai Atelier', 'mihai.atelier.e2e', ['staff'], ['waiting']),
 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), "\n";

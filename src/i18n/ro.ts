@@ -1,8 +1,10 @@
+import { ordersRo } from '../orders/messages';
 /**
  * Romanian interface text: the default and fallback locale, and the reference shape every other locale must match
  * (see `Messages`). Server error codes are only lookup keys here; server text is never shown.
  */
 export const ro = {
+  orders: ordersRo,
   locale: { short: "RO", name: "Română", switcher: "Limba interfeței" },
   brand: { name: "Arasya B2B", product: "Management vânzări en-gros", title: "Arasya B2B", notConfigured: "Aplicația B2B nu este configurată." },
   common: {
@@ -225,6 +227,14 @@ export const ro = {
     passwordMismatch: "Confirmarea nu coincide cu parola nouă.",
   },
   errors: {
+    ORDER_NOT_FOUND: "Comanda nu a fost găsită.",
+    ORDER_CHANGED: "Comanda a fost modificată între timp. Datele introduse sunt păstrate.",
+    ORDER_FINALIZED: "Comanda a fost deja finalizată.",
+    CURRENCY_CHANGE_REQUIRES_EMPTY_PRICING: "Ștergeți prețurile și salvați ciorna înainte de a schimba moneda.",
+    ORDER_CANCELLED: "Comanda este anulată și nu mai poate fi editată.",
+    ORDER_LINE_NOT_FOUND: "Linia nu a fost găsită.",
+    COMPANY_INACTIVE: "Compania este inactivă. Nu poate primi comenzi noi.",
+
     fallback: "Operațiunea nu a putut fi finalizată.",
     CLIENT_ERROR: "A apărut o eroare în aplicație. Reîncărcați pagina.",
     SERVER_ERROR: "Serverul nu a putut finaliza cererea. Încercați din nou.",

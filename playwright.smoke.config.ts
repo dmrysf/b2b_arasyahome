@@ -8,7 +8,7 @@ const webPort = 4178;
  */
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /b2b-(smoke|companies)\.spec\.ts/,
+  testMatch: /b2b-(smoke|companies|orders)\.spec\.ts/,
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: false,

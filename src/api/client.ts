@@ -1,3 +1,4 @@
+import { ORDER_PERMISSIONS, mapCalculation, mapOrderDetail, mapOrderList, mapOrderMutation, type OrderFields, type OrderQuery, type LineInput, type Currency } from './orders';
 import {
   mapActivity, mapCompanyDetail, mapCompanyList, mapMutation, COMPANY_PERMISSIONS,
   type AddressFields, type CompanyFields, type CompanyPermission, type ContactFields, type StatusFilter,
@@ -52,7 +53,7 @@ function mapAccess(value: unknown): B2bAccess {
   }
   // Only known module permissions are kept; an older API without the field means "none".
   const permissions = Array.isArray(raw.permissions)
-    ? COMPANY_PERMISSIONS.filter((permission) => (raw.permissions as unknown[]).includes(permission))
+    ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
     : [];
   return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions };
 }
@@ -129,6 +130,32 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     },
     /** The server-side B2B gate; it fails with APPLICATION_ACCESS_DENIED once B2B access is removed. */
     access: async () => mapAccess(await request<unknown>("/b2b/access")),
+
+    listOrders: async (query: OrderQuery = {}) => {
+      const params = new URLSearchParams();
+      if (query.companyId) params.set('companyId', query.companyId);
+      if (query.search?.trim()) params.set('search', query.search.trim());
+      if (query.status) params.set('status', query.status);
+      if (query.limit) params.set('limit', String(query.limit));
+      if (query.cursor) params.set('cursor', query.cursor);
+      if (query.currency) params.set('currency', query.currency);
+      if (query.from) params.set('from', query.from);
+      if (query.to) params.set('to', query.to);
+      return mapOrderList(await request(`/b2b/orders${params.size ? `?${params}` : ''}`));
+    },
+    getOrder: async (id: string) => mapOrderDetail(await request(`/b2b/orders/${segment(id)}`)),
+    calculateOrder: async (fields: { currencyCode: Currency; lines: LineInput[] }) => mapCalculation(await request('/b2b/orders/calculate', {method:'POST',body:fields})),
+    createOrder: async (fields: OrderFields, {idempotencyKey}: Idempotent) => mapOrderMutation(await request('/b2b/orders',{method:'POST',body:fields,idempotencyKey})),
+    updateOrder: async (id: string, fields: OrderFields, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}`,{method:'PUT',body:{...fields,expectedVersion},idempotencyKey})),
+    finalizeOrder: async (id: string, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/finalize`,{method:'POST',body:{expectedVersion},idempotencyKey})),
+    cancelOrder: async (id: string, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/cancel`,{method:'POST',body:{expectedVersion},idempotencyKey})),
+    createOrderLine: async (id: string, fields: LineInput, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/lines`,{method:'POST',body:{...fields,id:null,expectedVersion},idempotencyKey})),
+    updateOrderLine: async (id: string, lineId: string, fields: LineInput, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/lines/${segment(lineId)}`,{method:'PUT',body:{...fields,expectedVersion},idempotencyKey})),
+    duplicateOrderLine: async (id: string, lineId: string, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/lines/${segment(lineId)}/duplicate`,{method:'POST',body:{expectedVersion},idempotencyKey})),
+    removeOrderLine: async (id: string, lineId: string, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/lines/${segment(lineId)}/remove`,{method:'POST',body:{expectedVersion},idempotencyKey})),
+    reorderOrderLines: async (id: string, lineIds: string[], expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/lines/reorder`,{method:'POST',body:{lineIds,expectedVersion},idempotencyKey})),
+    duplicateOrder: async (id: string, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/duplicate`,{method:'POST',body:{expectedVersion},idempotencyKey})),
+    orderActivity: async (id: string, cursor?: string|null) => mapActivity(await request(`/b2b/orders/${segment(id)}/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`)),
 
     listCompanies: async (query: CompanyQuery = {}) => {
       const params = new URLSearchParams();

@@ -13,6 +13,8 @@ import {
 import { Intent } from "./idempotency";
 import { COMPANIES_PATH, PrimaryBadge, StatusBadge, SuccessNotice } from "./shared";
 import { useEditor, type Conflict } from "./useEditor";
+import type { OrderCapabilities } from "../api/orders";
+import { OrdersPage } from "../orders/OrdersPage";
 
 type Section = "info" | "contacts" | "addresses" | "notes" | "activity";
 const SECTIONS: Section[] = ["info", "contacts", "addresses", "notes", "activity"];
@@ -21,7 +23,7 @@ const SECTIONS: Section[] = ["info", "contacts", "addresses", "notes", "activity
  * One company: identity and fiscal data, contacts, addresses, internal notes and activity, each in its own section
  * so no single form grows huge. Every action is offered only with the matching permission; the server decides.
  */
-export function CompanyDetailPage({ api, id, navigate, flash }: { api: B2bApi; id: string; navigate: (path: string) => void; flash: string | null }) {
+export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities }: { api: B2bApi; id: string; navigate: (path: string) => void; flash: string | null; orderCapabilities?: OrderCapabilities }) {
   const { t } = useI18n();
   const c = t.companies;
   const [detail, setDetail] = useState<CompanyDetail | null>(null);
@@ -91,6 +93,7 @@ export function CompanyDetailPage({ api, id, navigate, flash }: { api: B2bApi; i
         {section === "addresses" && <AddressesSection api={api} detail={detail} reload={reload} onChanged={(result, message) => applied(message)(result)} />}
         {section === "activity" && <ActivitySection key={company.version + detail.contacts.length + detail.addresses.length} api={api} companyId={company.id} />}
       </div>
+      {orderCapabilities?.canView && <OrdersPage api={api} companyId={id} canView canCreate={orderCapabilities.canCreate && company.status === "active"} navigate={navigate} />}
     </div>
   );
 }

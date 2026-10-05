@@ -32,12 +32,13 @@ export function HomePage({ access, session, navigate }: { access: B2bAccess; ses
           <h2 id="modules-title">{h.modulesTitle}</h2>
           <p className="muted">{h.modulesBody}</p>
           <ul className="module-list">
-            {access.permissions.length > 0 && (
+            {access.permissions.some(p => p.startsWith("b2b.companies.")) && (
               <li>
                 <a className="link" href={COMPANIES_PATH} onClick={(event) => { event.preventDefault(); navigate(COMPANIES_PATH); }}>{t.shell.modules.companies}</a>
                 <span className="badge badge-success">{h.available}</span>
               </li>
             )}
+            {access.permissions.some(p => p.startsWith("b2b.orders.")) && <li><a className="link" href="/comenzi" onClick={event => { event.preventDefault(); navigate("/comenzi"); }}>{t.shell.modules.orders}</a><span className="badge badge-success">{h.available}</span></li>}
             {PLANNED_MODULES.map((key) => <li key={key}><span>{t.shell.modules[key]}</span><span className="soon">{t.shell.planned}</span></li>)}
           </ul>
         </section>

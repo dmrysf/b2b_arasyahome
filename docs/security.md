@@ -18,6 +18,8 @@ B2B introduces no security model of its own. It uses the Operations API's Centra
 
 ## Companies data (0.2.0)
 
+Classic Orders V1 (0.3.0) reads safe company/contact/address snapshots only through authenticated commercial order endpoints. These snapshots are never exposed by production/Staff routes.
+
 - Company endpoints need the session, an active identity, `b2b.access` and a specific company permission (`b2b.companies.view`, `.create`, `.update` or `.manage_status`). Mutations also need the exact origin, the CSRF token and an `Idempotency-Key`. Hiding a button is a convenience; the server decides.
 - Company, contact and address data and internal notes are kept in memory only while a page is open. They are never written to browser storage, never logged by the frontend, and never shown in error text.
 - The Operations API exposes company data only through `/b2b/companies`. It is not part of Staff routes, production overviews, order lists or details, source health, `/health` or the IAM audit. Its activity history stores changed field names, never values.
@@ -25,6 +27,8 @@ B2B introduces no security model of its own. It uses the Operations API's Centra
 - Validation and conflicts are neutral (required, invalid, duplicate tax identifier, concurrent change). There is no risk scoring or payment labelling.
 
 ## Origin and CORS
+
+Order writes additionally enforce actor-scoped idempotency and aggregate versions; finalization/cancellation freezes commercial fields. Order activity contains safe changed field names, never note/contact values. All business input remains in component memory, not browser storage. The API enforces the four fixed order permissions on every request and before replay; access revocation cannot replay a previously authorized mutation.
 
 - The Operations API accepts credentialed requests only from the exact origins in `ARASYA_ALLOWED_ORIGINS`. Production lists `https://staff.arasyahome.ro`, `https://dashboard.arasyahome.ro` and `https://b2b.arasyahome.ro`; there is no wildcard and no subdomain pattern.
 - Every mutation needs the exact `Origin` and a valid CSRF token. Look-alike origins (`https://b2b.arasyahome.ro.evil.example`, `http://b2b.arasyahome.ro`, other subdomains) are rejected; the Operations API unit, integration and B2B real-API tests cover this.

@@ -5,6 +5,7 @@ import { App } from "../src/App";
 import { createApi } from "../src/api/client";
 import { I18nProvider } from "../src/i18n/context";
 import type { Locale } from "../src/i18n";
+import type { B2bAccess } from "../src/api/types";
 import { Shell } from "../src/layout/Shell";
 import { PLANNED_MODULES } from "../src/layout/modules";
 import { HomePage } from "../src/pages/HomePage";
@@ -14,7 +15,7 @@ import { accessPayload, ALL_COMPANY_PERMISSIONS, API, text } from "./support";
 const access = { ...accessPayload(), application: "b2b" as const, permissions: [...ALL_COMPANY_PERMISSIONS] };
 const session = { employee: { employeeUuid: "11111111-1111-4111-8111-111111111111", displayName: "Elena Vânzări", username: "elena.vanzari", applications: ["b2b"], isRoot: false, mustChangePassword: false, authorizationVersion: 4 }, expiresAt: "2026-10-05T06:00:00+00:00" };
 
-const shell = (locale: Locale, isRoot = false, permissions: typeof access.permissions = access.permissions) => renderToStaticMarkup(
+const shell = (locale: Locale, isRoot = false, permissions: B2bAccess["permissions"] = access.permissions) => renderToStaticMarkup(
   <I18nProvider locale={locale}>
     <Shell access={{ ...access, permissions, employee: { ...access.employee, isRoot } }} pathname="/" navigate={() => undefined} onLogout={() => undefined}>
       <HomePage access={{ ...access, permissions, employee: { ...access.employee, isRoot } }} session={session} navigate={() => undefined} />
@@ -41,12 +42,13 @@ test("the shell shows the B2B brand, the identity from Central IAM and logout", 
   assert.match(text(shell("ro", true)), /Administrator principal/);
 });
 
-test("Companies is the only available module; the rest stay disabled placeholders without links or data", () => {
+test("company-only grants do not offer Orders; future modules remain placeholders", () => {
   const html = shell("ro");
   const links = [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual([...new Set(links)], ["/", "/companii"], "navigation links: home and Companies");
-  for (const label of ["Panou de control", "Companii", "Comenzi", "Conturi curente", "Proiecte", "Produse", "Rapoarte"]) assert.match(text(html), new RegExp(label));
-  assert.equal(PLANNED_MODULES.length, 6);
+  for (const label of ["Panou de control", "Companii", "Conturi curente", "Proiecte", "Produse", "Rapoarte"]) assert.match(text(html), new RegExp(label));
+  assert.equal(PLANNED_MODULES.length, 5);
+  assert.ok(!PLANNED_MODULES.includes("orders" as never));
   assert.ok(!PLANNED_MODULES.includes("companies" as never));
   assert.match(text(html), /În curând/);
   assert.match(text(html), /Companii Disponibil/);
@@ -61,9 +63,15 @@ test("without a company permission the Companies module is not offered", () => {
 });
 
 test("the shell is complete in Turkish", () => {
-  const html = text(shell("tr"));
+  const html = text(shell("tr", false, [...access.permissions, "b2b.orders.view"]));
   for (const label of ["Toptan Satış Yönetimi", "Hoş geldiniz, Elena Vânzări.", "Ana sayfa", "Yakında", "Şirketler", "Siparişler", "Cari hesaplar", "Projeler", "Ürünler", "Raporlar", "Çıkış yap", "B2B erişimi"]) {
     assert.ok(html.includes(label), label);
   }
   assert.doesNotMatch(html, /Pagina principală|Ieșire din cont|În curând|Companii/);
+});
+
+test("order-only access offers Orders without granting Companies", () => {
+  const html = shell("ro", false, ["b2b.orders.view"]);
+  assert.match(html, /href="\/comenzi"/);
+  assert.doesNotMatch(html, /href="\/companii"/);
 });

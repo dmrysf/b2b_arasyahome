@@ -1,5 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import { createCompanyStore } from "./mock-companies";
+import { createOrderStore } from "./mock-orders";
 
 export const API = "https://api.arasyahome.ro";
 
@@ -30,6 +31,7 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
   });
   const session = () => ({ employee: employee(), expiresAt: "2026-10-05T06:00:00+00:00", csrfToken: "csrf-smoke" });
   const companies = createCompanyStore(state.permissions);
+  const orders = createOrderStore(state.permissions, companies);
   const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   const fail = (route: Route, code: string, status: number) => json(route, { error: { code, message: "English server text", requestId: "r" } }, status);
 
@@ -60,12 +62,18 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
       const reply = companies.handle(method, path, url.searchParams, body, (await request.allHeaders())["idempotency-key"]);
       return json(route, reply.body, reply.status);
     }
+    if (path === "/b2b/orders" || path.startsWith("/b2b/orders/")) {
+      if (state.accessRemoved) return fail(route, "APPLICATION_ACCESS_DENIED", 403);
+      const reply = orders.handle(method, path, url.searchParams, body, (await request.allHeaders())["idempotency-key"]);
+      return json(route, reply.body, reply.status);
+    }
     return fail(route, "NOT_FOUND", 404);
   });
 
   return {
     state,
     companies,
+    orders,
     removeAccess() { state.accessRemoved = true; state.applications = state.applications.filter((key) => key !== "b2b"); state.authorizationVersion += 1; },
   };
 }

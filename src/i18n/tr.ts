@@ -1,7 +1,9 @@
+import { ordersTr } from '../orders/messages';
 import type { Messages } from "./ro";
 
 /** Turkish interface text. It must match the Romanian shape exactly; Romanian stays the fallback. */
 export const tr: Messages = {
+  orders: ordersTr,
   locale: { short: "TR", name: "Türkçe", switcher: "Arayüz dili" },
   brand: { name: "Arasya B2B", product: "Toptan Satış Yönetimi", title: "Arasya B2B", notConfigured: "B2B uygulaması yapılandırılmamış." },
   common: {
@@ -224,6 +226,14 @@ export const tr: Messages = {
     passwordMismatch: "Doğrulama yeni şifreyle eşleşmiyor.",
   },
   errors: {
+    ORDER_NOT_FOUND: "Sipariş bulunamadı.",
+    ORDER_CHANGED: "Sipariş başka biri tarafından değiştirildi. Girdiğiniz bilgiler korunuyor.",
+    ORDER_FINALIZED: "Sipariş zaten kesinleştirildi.",
+    CURRENCY_CHANGE_REQUIRES_EMPTY_PRICING: "Para birimini değiştirmeden önce fiyatları temizleyip taslağı kaydedin.",
+    ORDER_CANCELLED: "Sipariş iptal edilmiş ve düzenlenemez.",
+    ORDER_LINE_NOT_FOUND: "Satır bulunamadı.",
+    COMPANY_INACTIVE: "Şirket pasif. Yeni sipariş oluşturulamaz.",
+
     fallback: "İşlem tamamlanamadı.",
     CLIENT_ERROR: "Uygulamada bir hata oluştu. Sayfayı yenileyin.",
     SERVER_ERROR: "Sunucu isteği tamamlayamadı. Tekrar deneyin.",
