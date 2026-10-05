@@ -1,10 +1,10 @@
 958299911757bbc5b171bf7922add99429d080ead0d19a579518486a54943e8c  ./.cpanel.yml
 67cca55d2b6989e36a83e88f29f6df0082edcd3fa62943acc8779d70036ace94  ./dist/.htaccess
-059bfb81c9cf23aaf46114b0ab80c1b6c4a4c21528a5499382743b9bc4df33f2  ./dist/assets/index-DZHNyieU.css
-15033c10088e1d72832c16e1f3c2818ffbe462aa33d6104c78a753ed205aded7  ./dist/assets/index-FK4DVd3m.js
+d6dba85d6bbbc1770b01990c1882db2187d7a35be799dbd35b426f1ca51982ca  ./dist/assets/index-B9S1nk0z.css
+099ea8f9a3eeaa780b09ba3443992b3cd7bf194a118bb746e51e7010dc45daf6  ./dist/assets/index-D9fgtGEz.js
 c20c724409d7e9997c32fa6980d9c2c65801fc971a59c619bc01b45ee6f8f0a9  ./dist/favicon.svg
-9ba7acd7dcc7cab089cda40eaaeb7e53a9c7d971610dec5252faae9dfad49193  ./dist/index.html
-984188529e86a1dfc44b23cdd35cd49ae16aa4c6267b69a1069de7a31534af92  ./dist/release.json
+1ad6c49392b7399b5ad9aa29a47d36ee78d9f9e0dd4edce462031f454b12fea2  ./dist/index.html
+1b572a72ee5ce6ed69495d1c9c640fc02d0c5970dacf419d9ca23413c9d30cf4  ./dist/release.json
 331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1  ./dist/robots.txt
 24c3d8884cafcfd031306a752673721e0e300829ba9cd752c17ecd7288214870  ./scripts/b2b-release-common.sh
 6ac5df1eae42226ac04d8632d774cf81b3147e39c29f130f94a0c3dcad704c13  ./scripts/cpanel-deploy.sh
