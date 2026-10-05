@@ -4,6 +4,8 @@ Wholesale sales management for Arasya (`https://b2b.arasyahome.ro`). Romanian: *
 
 Arasya B2B is an internal application for Arasya employees who manage wholesale customers. It is not a customer portal.
 
+Version 0.5.0 adds [explicit Operations + Staff integration V1](docs/production.md). Finalization remains commercial freeze + receivable only. A separate permission-gated, confirmed submission creates one canonical `b2b` production order, without changing prices or the current account. Progress is read-only and refreshed from Operations; commercial cancellation is blocked after any submission. Requires Operations API 2.11.0 / additive migration 012, Dashboard 0.5.4 permission labels, and Staff 2.3.2 manufacturing context. No automatic role grants, source writeback or production cancellation.
+
 Version 0.4.1 is a corrective release found in production acceptance: on phones (390 and 360 px) the payment form's allocation table widened the page; it now scrolls inside its own box. Frontend only; no API, migration or permission change.
 
 Version 0.4.0 adds [Current Account V1](docs/current-account.md): RON and EUR balances per company, movements, payments with optional allocations, opening balances, adjustments, reversals and CSV/PDF statements, in the company detail (`Cont curent` tab) and in the top-level `Conturi curente` module. Every figure comes from the Operations API ledger (2.10.0, migration 011); the browser never computes an authoritative amount. Finalized orders post their receivable automatically; there is no manual posting, no FX, no payment terms or credit limits, and orders are never blocked by a balance.

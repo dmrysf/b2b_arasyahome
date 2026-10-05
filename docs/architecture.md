@@ -36,7 +36,7 @@ B2B is **not** an authentication system, a user or employee database, a producti
 | Wholesale companies, contacts, addresses, notes and company activity (0.2.0) | Operations API B2B module (`operations-api/src/B2B`, migration 009), separate from production, Staff, sources and IAM internals |
 | Commercial orders, line snapshots/pricing and order activity (0.3.0) | Operations API B2B module (migration 010), isolated from production; see [Classic Orders](classic-orders.md) |
 
-B2B never keeps a copy of production state and never writes production data. Classic V1 finalization is commercial only; it sends nothing to Staff or source commerce.
+B2B never owns or persists a copy of production stage/owner state. Classic finalization is commercial only; it sends nothing to Staff or source commerce. Since 0.5.0 a separate, explicitly confirmed submission requests one canonical production order through Operations API 2.11.0. Staff operates it; B2B only reads its current progress. See [production boundaries](production.md).
 
 ## Companies V1 (0.2.0)
 

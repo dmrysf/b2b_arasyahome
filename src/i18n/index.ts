@@ -1,4 +1,6 @@
 import { ApiError } from "../api/client";
+import type { StageId } from '../api/production';
+import { stagesTr } from '../production/messages';
 import { ro, type Messages } from "./ro";
 import { readLocalePreference, writeLocalePreference, type LocaleStorage } from "./storage";
 import { tr } from "./tr";
@@ -57,6 +59,7 @@ export type Translator = {
   /** Human message for a failure. Server text and stack traces are never shown. */
   problem: (error: unknown) => string;
   dateTime: (value: string | null) => string;
+  stageLabel: (stage: { id: StageId; label: string }) => string;
 };
 
 export function createTranslator(locale: Locale): Translator {
@@ -66,6 +69,7 @@ export function createTranslator(locale: Locale): Translator {
   return {
     locale,
     t,
+    stageLabel: (stage) => ({ ro: stage.label, tr: stagesTr[stage.id] })[locale],
     problem: (error) => {
       if (error instanceof ValidationProblem) return t.validation[error.key];
       if (error instanceof ApiError) return pick(errors, error.code) ?? (error.status === 403 ? t.errors.UNAUTHORIZED_ACTION : t.errors.fallback);

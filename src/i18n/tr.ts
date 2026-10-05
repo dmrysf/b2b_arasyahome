@@ -1,11 +1,13 @@
 import { ordersTr } from '../orders/messages';
 import { accountsTr } from '../accounts/messages';
+import { productionTr } from '../production/messages';
 import type { Messages } from "./ro";
 
 /** Turkish interface text. It must match the Romanian shape exactly; Romanian stays the fallback. */
 export const tr: Messages = {
   orders: ordersTr,
   accounts: accountsTr,
+  production: productionTr,
   locale: { short: "TR", name: "Türkçe", switcher: "Arayüz dili" },
   brand: { name: "Arasya B2B", product: "Toptan Satış Yönetimi", title: "Arasya B2B", notConfigured: "B2B uygulaması yapılandırılmamış." },
   common: {
@@ -233,6 +235,12 @@ export const tr: Messages = {
     ORDER_FINALIZED: "Sipariş zaten kesinleştirildi.",
     CURRENCY_CHANGE_REQUIRES_EMPTY_PRICING: "Para birimini değiştirmeden önce fiyatları temizleyip taslağı kaydedin.",
     ORDER_CANCELLED: "Sipariş iptal edilmiş ve düzenlenemez.",
+    ORDER_ALREADY_IN_PRODUCTION: "Sipariş zaten üretimde. Ticari iptal artık yapılamaz.",
+    PRODUCTION_NOT_ELIGIBLE: "Yalnızca kesinleştirilmiş sipariş üretime gönderilebilir.",
+    PRODUCTION_LINE_UNSUPPORTED: "Bir satır üretimde güvenle temsil edilemiyor. Hiçbir satır gönderilmedi.",
+    PRODUCTION_SNAPSHOT_INVALID: "Siparişin tarihsel bilgileri geçersiz. Yöneticiye başvurun.",
+    WORKFLOW_UNAVAILABLE: "Üretim iş akışı kullanılamıyor. Daha sonra tekrar deneyin.",
+    SOURCE_INACTIVE: "B2B üretim kaynağı etkin değil. Yöneticiye başvurun.",
     ORDER_LINE_NOT_FOUND: "Satır bulunamadı.",
     COMPANY_INACTIVE: "Şirket pasif. Yeni sipariş, açılış bakiyesi veya borç düzeltmesi yapılamaz.",
     PAYMENT_NOT_FOUND: "Ödeme bulunamadı.",

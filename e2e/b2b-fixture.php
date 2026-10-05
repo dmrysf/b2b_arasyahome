@@ -86,6 +86,15 @@ $accountRole = (int) $call('POST', '/management/roles', [
     'permissions' => ['b2b.companies.view', 'b2b.orders.view', 'b2b.accounts.view', 'b2b.accounts.record_payment', 'b2b.accounts.adjust', 'b2b.accounts.reverse', 'b2b.accounts.export'],
 ], $root)['body']['role']['id'];
 
+$productionRole = (int) $call('POST', '/management/roles', [
+    'name' => 'Trimitere producție B2B (E2E)', 'authorityRank' => 200,
+    'permissions' => ['b2b.companies.view','b2b.orders.view','b2b.orders.create','b2b.orders.update','b2b.orders.manage_status','b2b.production.view','b2b.production.submit'],
+], $root)['body']['role']['id'];
+$operatorRole = (int) $call('POST', '/management/roles', [
+    'name' => 'Operator Staff (E2E)', 'authorityRank' => 200,
+    'permissions' => ['orders.view_mine','orders.scan','orders.claim','orders.advance_stage'],
+], $root)['body']['role']['id'];
+
 echo json_encode([
     'origins' => ['b2b' => $b2bOrigin, 'admin' => $adminOrigin],
     'root' => ['username' => RootBootstrapService::ROOT_USERNAME, 'password' => $rootPassword],
@@ -93,5 +102,7 @@ echo json_encode([
     'salesRoleId' => $salesRole,
     'orderUser' => $create('Ana Comenzi', 'ana.comenzi.e2e', ['b2b'], [], [$orderRole]),
     'accountUser' => $create('Ioana Contabil', 'ioana.conturi.e2e', ['b2b'], [], [$accountRole]),
+    'productionUser' => $create('Dana Producție', 'dana.productie.e2e', ['b2b'], [], [$productionRole]),
+    'operatorUser' => $create('Dan Atelier', 'dan.atelier.e2e', ['staff'], ['waiting','material-preparation'], [$operatorRole]),
     'staffUser' => $create('Mihai Atelier', 'mihai.atelier.e2e', ['staff'], ['waiting']),
 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), "\n";

@@ -8,6 +8,7 @@ import {
   type AccountCurrency, type EntryInput, type MovementQuery, type OverviewQuery, type PaymentInput, type ReversalInput, type StatementQuery, type AllocationInput,
 } from "./accounts";
 import { ApiError } from "./errors";
+import { PRODUCTION_PERMISSIONS, mapProduction } from './production';
 import type { B2bAccess, Session, SessionEmployee } from "./types";
 
 export { ApiError } from "./errors";
@@ -57,7 +58,7 @@ function mapAccess(value: unknown): B2bAccess {
   }
   // Only known module permissions are kept; an older API without the field means "none".
   const permissions = Array.isArray(raw.permissions)
-    ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS, ...ACCOUNT_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
+    ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS, ...ACCOUNT_PERMISSIONS, ...PRODUCTION_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
     : [];
   return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions };
 }
@@ -175,6 +176,8 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
       return mapOrderList(await request(`/b2b/orders${params.size ? `?${params}` : ''}`));
     },
     getOrder: async (id: string) => mapOrderDetail(await request(`/b2b/orders/${segment(id)}`)),
+    getProduction: async (id: string) => mapProduction(await request(`/b2b/orders/${segment(id)}/production`)),
+    submitProduction: async (id: string, expectedVersion: number, { idempotencyKey }: Idempotent) => mapProduction(await request(`/b2b/orders/${segment(id)}/production`, { method: 'POST', body: { expectedVersion }, idempotencyKey })),
     calculateOrder: async (fields: { currencyCode: Currency; lines: LineInput[] }) => mapCalculation(await request('/b2b/orders/calculate', {method:'POST',body:fields})),
     createOrder: async (fields: OrderFields, {idempotencyKey}: Idempotent) => mapOrderMutation(await request('/b2b/orders',{method:'POST',body:fields,idempotencyKey})),
     updateOrder: async (id: string, fields: OrderFields, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}`,{method:'PUT',body:{...fields,expectedVersion},idempotencyKey})),

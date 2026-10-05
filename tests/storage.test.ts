@@ -30,7 +30,7 @@ test("no authentication token handling, JWT or third-party auth exists", () => {
   }
   const manifest = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { name: string; version: string; dependencies: Record<string, string>; devDependencies: Record<string, string> };
   assert.equal(manifest.name, "arasya-b2b");
-  assert.equal(manifest.version, "0.4.1");
+  assert.equal(manifest.version, "0.5.0");
   assert.deepEqual(Object.keys(manifest.dependencies).sort(), ["react", "react-dom"], "runtime dependencies stay minimal");
   for (const forbidden of ["three", "@babylonjs/core", "babylonjs", "@react-three/fiber", "next", "vue", "@angular/core", "tailwindcss", "jsonwebtoken", "jose", "firebase", "@auth0/auth0-react"]) {
     assert.equal(forbidden in { ...manifest.dependencies, ...manifest.devDependencies }, false, forbidden);

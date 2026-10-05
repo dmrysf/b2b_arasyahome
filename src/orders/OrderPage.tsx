@@ -7,9 +7,12 @@ import { OrderActivity } from "./OrderActivity";
 import { FieldError, OrderLineEditor } from "./OrderLineEditor";
 import { addressLabel, orderPath, snapshotOption, type OrderDraft } from "./model";
 import { useOrderEditor } from "./useOrderEditor";
+import { ProductionCard } from '../production/ProductionCard';
+import type { ProductionCapabilities } from '../api/production';
 
-export function OrderPage({ api, id, companyId, capabilities, canCompanyView, navigate, onDirty }: {
+export function OrderPage({ api, id, companyId, capabilities, productionCapabilities = { canView: false, canSubmit: false }, canCompanyView, navigate, onDirty }: {
   api: B2bApi; id?: string; companyId?: string; capabilities: OrderCapabilities; canCompanyView: boolean;
+  productionCapabilities?: ProductionCapabilities;
   navigate: (path: string) => void; onDirty: (dirty: boolean) => void;
 }) {
   const { t, problem, dateTime } = useI18n(), o = t.orders;
@@ -85,6 +88,7 @@ export function OrderPage({ api, id, companyId, capabilities, canCompanyView, na
       </div>
       {order?.sourceOrderId && <a href={orderPath(order.sourceOrderId)} onClick={event => { event.preventDefault(); navigate(orderPath(order.sourceOrderId!)); }}>{o.source}</a>}
     </header>
+    {order && <ProductionCard key={order.id} api={api} order={order} capabilities={productionCapabilities} disabled={e.busy || e.dirty || e.conflict} onSubmitted={e.productionSubmitted} />}
     {e.notice && <p className="notice notice-success order-success" role="status">{o[e.notice]}</p>}
     {e.error !== null && <p className="notice notice-error" role="alert">{problem(e.error)}</p>}
     {e.conflict && <section className="card notice notice-warning">
@@ -144,7 +148,7 @@ export function OrderPage({ api, id, companyId, capabilities, canCompanyView, na
       <div className="order-actions">
         {e.editable && <button type="button" className="button" disabled={e.busy || e.conflict || !e.draft.companyId || (!!id && !e.dirty)} onClick={() => void e.mutate("save")}>{e.busy ? t.common.saving : o.save}</button>}
         {id && e.caps.canFinalize && !e.frozen && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict || !e.calculation?.complete} onClick={() => e.setConfirm("finalize")}>{o.finalize}</button>}
-        {id && e.caps.canCancel && order?.status !== "cancelled" && <button type="button" className="button button-ghost" disabled={e.busy || e.dirty || e.conflict} onClick={() => e.setConfirm("cancel")}>{o.cancelOrder}</button>}
+        {id && e.caps.canCancel && !order?.productionSubmitted && order?.status !== "cancelled" && <button type="button" className="button button-ghost" disabled={e.busy || e.dirty || e.conflict} onClick={() => e.setConfirm("cancel")}>{o.cancelOrder}</button>}
         {id && e.caps.canCreate && e.caps.canView && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict} onClick={() => void e.mutate("duplicate")}>{o.duplicate}</button>}
       </div>
       {!e.frozen && <p className="muted keyboard-hint">{o.keyboardHint}</p>}

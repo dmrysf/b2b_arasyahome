@@ -34,6 +34,9 @@ export function useOrderEditor(api: B2bApi, id: string | undefined, companyId: s
     const fields = orderFields(next);
     setCalc({ fingerprint: JSON.stringify({ currencyCode: fields.currencyCode, lines: fields.lines }), value: value.order.calculation });
   }, []);
+  const productionSubmitted = useCallback(() => setDetail(value => !value || value.order.productionSubmitted ? value : {
+    ...value, order: { ...value.order, productionSubmitted: true }, capabilities: { ...value.capabilities, canCancel: false },
+  }), []);
   useEffect(() => {
     if (!id) return;
     let active = true;
@@ -122,5 +125,5 @@ export function useOrderEditor(api: B2bApi, id: string | undefined, companyId: s
   }
   return { detail, draft, caps, loading, busy, dirty, frozen, editable, error, fields, notice, conflict, current, confirm,
     setConfirm, calculation, calculationError, currencyIsLocked: currencyLocked(submitted.lines, detail?.order.lines ?? []),
-    change, changeLine, lineAction, mutate, loadCurrent, resolveConflict };
+    change, changeLine, lineAction, mutate, loadCurrent, resolveConflict, productionSubmitted };
 }

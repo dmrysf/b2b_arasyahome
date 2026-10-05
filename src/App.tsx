@@ -103,6 +103,7 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   if (state.kind === "no-access") return <NoAccessPage displayName={state.session.employee.displayName} onLogout={() => { void logout(); }} />;
 
   const permissions = state.access.permissions;
+  const productionCaps = { canView: permissions.includes('b2b.production.view'), canSubmit: permissions.includes('b2b.production.submit') };
   const route = companiesRoute(pathname);
   const orderRoute = ordersRoute(pathname);
   const accountRoute = accountsRoute(pathname);
@@ -125,7 +126,7 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   else if (orderRoute?.kind === "list") page = <OrdersPage api={api} canView={orderCaps.canView} canCreate={orderCaps.canCreate && canView} navigate={go} companyId={selectedCompany} />;
   else if (orderRoute?.kind === "create") page = <OrderPage key="new-order" api={api} capabilities={orderCaps} canCompanyView={canView} companyId={selectedCompany} navigate={go} onDirty={onDirty} />;
   else if (orderRoute?.kind === "detail") page = orderCaps.canView
-    ? <OrderPage key={orderRoute.id} api={api} id={orderRoute.id} capabilities={orderCaps} canCompanyView={canView} navigate={go} onDirty={onDirty} />
+    ? <OrderPage key={orderRoute.id} api={api} id={orderRoute.id} capabilities={orderCaps} productionCapabilities={productionCaps} canCompanyView={canView} navigate={go} onDirty={onDirty} />
     : <OrdersPage api={api} canView={false} canCreate={orderCaps.canCreate && canView} navigate={go} />;
   else if (accountRoute?.kind === "list") page = <AccountsPage api={api} canView={canViewAccounts} navigate={go} />;
   else if (accountRoute?.kind === "company") page = canViewAccounts

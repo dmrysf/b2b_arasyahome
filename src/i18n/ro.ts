@@ -1,5 +1,6 @@
 import { ordersRo } from '../orders/messages';
 import { accountsRo } from '../accounts/messages';
+import { productionRo } from '../production/messages';
 /**
  * Romanian interface text: the default and fallback locale, and the reference shape every other locale must match
  * (see `Messages`). Server error codes are only lookup keys here; server text is never shown.
@@ -7,6 +8,7 @@ import { accountsRo } from '../accounts/messages';
 export const ro = {
   orders: ordersRo,
   accounts: accountsRo,
+  production: productionRo,
   locale: { short: "RO", name: "Română", switcher: "Limba interfeței" },
   brand: { name: "Arasya B2B", product: "Management vânzări en-gros", title: "Arasya B2B", notConfigured: "Aplicația B2B nu este configurată." },
   common: {
@@ -234,6 +236,12 @@ export const ro = {
     ORDER_FINALIZED: "Comanda a fost deja finalizată.",
     CURRENCY_CHANGE_REQUIRES_EMPTY_PRICING: "Ștergeți prețurile și salvați ciorna înainte de a schimba moneda.",
     ORDER_CANCELLED: "Comanda este anulată și nu mai poate fi editată.",
+    ORDER_ALREADY_IN_PRODUCTION: "Comanda este deja în producție. Anularea comercială nu mai este permisă.",
+    PRODUCTION_NOT_ELIGIBLE: "Doar o comandă finalizată poate fi trimisă în producție.",
+    PRODUCTION_LINE_UNSUPPORTED: "O linie nu poate fi reprezentată în siguranță în producție. Nu a fost trimis nimic.",
+    PRODUCTION_SNAPSHOT_INVALID: "Datele istorice ale comenzii nu sunt valide. Contactați administratorul.",
+    WORKFLOW_UNAVAILABLE: "Fluxul de producție nu este disponibil. Reîncercați mai târziu.",
+    SOURCE_INACTIVE: "Sursa de producție B2B nu este activă. Contactați administratorul.",
     ORDER_LINE_NOT_FOUND: "Linia nu a fost găsită.",
     COMPANY_INACTIVE: "Compania este inactivă. Nu poate primi comenzi noi, sold inițial sau ajustări de debit.",
     PAYMENT_NOT_FOUND: "Plata nu a fost găsită.",

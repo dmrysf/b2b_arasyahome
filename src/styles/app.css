@@ -388,3 +388,11 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
 }
 .account-table td.mono, .account-table .mono { white-space: nowrap; }
 .statement-table { min-width: 760px; }
+/* Production is a read-only Operations projection, independent of the commercial workstation. */
+.production-card { min-width: 0; }
+.production-card progress { width: 100%; height: 0.65rem; accent-color: var(--accent, #1c665b); }
+.production-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.production-details div, .production-details dd { min-width: 0; overflow-wrap: anywhere; }
+.production-details dd { margin: 0.35rem 0 0; }
+@media (max-width: 600px) { .production-details { grid-template-columns: 1fr; } .production-card .order-section-title { align-items: stretch; flex-direction: column; } }
+.production-confirm-lines { max-height: 12rem; overflow: auto; padding-inline-start: 1.25rem; overflow-wrap: anywhere; }

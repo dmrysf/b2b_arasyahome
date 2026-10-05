@@ -21,6 +21,7 @@ export type Calculation = { currencyCode: Currency; lines: { totals: LineTotals 
 export type OrderCapabilities = { canView: boolean; canCreate: boolean; canUpdate: boolean; canFinalize: boolean; canCancel: boolean };
 type Actor = { id: string; displayName: string };
 export type Order = OrderFields & {
+  productionSubmitted?: boolean;
   id: string; code: string; status: CommercialStatus; version: number; sourceOrderId: string | null;
   companySnapshot: Record<string, unknown>; contactSnapshot: Record<string, unknown> | null;
   billingAddressSnapshot: Record<string, unknown> | null; deliveryAddressSnapshot: Record<string, unknown> | null;
@@ -88,6 +89,7 @@ export function mapOrderDetail(v: unknown): OrderDetail {
     billingAddressId: nullable(r.billingAddressId), deliveryAddressId: nullable(r.deliveryAddressId),
     customerReference: nullable(r.customerReference), notes: nullable(r.notes), productionNotes: nullable(r.productionNotes), lines,
     id: str(r.id), code: str(r.code), status: status(r.status), version: integer(r.version), sourceOrderId: nullable(r.sourceOrderId),
+    productionSubmitted: r.productionSubmitted === undefined ? false : bool(r.productionSubmitted),
     companySnapshot: obj(r.companySnapshot), contactSnapshot: snapshot(r.contactSnapshot),
     billingAddressSnapshot: snapshot(r.billingAddressSnapshot), deliveryAddressSnapshot: snapshot(r.deliveryAddressSnapshot),
     createdAt: str(r.createdAt), updatedAt: str(r.updatedAt), finalizedAt: nullable(r.finalizedAt), cancelledAt: nullable(r.cancelledAt),
