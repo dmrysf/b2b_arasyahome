@@ -55,7 +55,7 @@ export const tr: Messages = {
   home: {
     greeting: (name: string) => `Hoş geldiniz, ${name}.`,
     foundationTitle: "Şirket içi toptan satış uygulaması",
-    foundationBody: "Giriş, erişim ve arayüz dilleri merkezi Arasya hesabı üzerinden çalışır. İlk kullanılabilir modül Şirketler; diğer modüller adım adım eklenecektir.",
+    foundationBody: "Giriş, erişim ve arayüz dilleri merkezi Arasya hesabı üzerinden çalışır. Şirketler ve Siparişler (hızlı toptan sipariş girişi) modülleri kullanılabilir; diğer modüller adım adım eklenecektir.",
     accountTitle: "Hesabınız",
     accountName: "Ad",
     accountUsername: "Kullanıcı",

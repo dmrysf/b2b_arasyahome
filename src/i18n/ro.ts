@@ -56,7 +56,7 @@ export const ro = {
   home: {
     greeting: (name: string) => `Bun venit, ${name}.`,
     foundationTitle: "Aplicația internă pentru vânzări en-gros",
-    foundationBody: "Autentificarea, accesul și limbile interfeței funcționează prin contul central Arasya. Primul modul disponibil este Companii; următoarele module vor fi adăugate pe rând.",
+    foundationBody: "Autentificarea, accesul și limbile interfeței funcționează prin contul central Arasya. Sunt disponibile modulele Companii și Comenzi (introducere rapidă de comenzi en-gros); următoarele module vor fi adăugate pe rând.",
     accountTitle: "Contul dumneavoastră",
     accountName: "Nume",
     accountUsername: "Utilizator",

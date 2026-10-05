@@ -5,7 +5,7 @@ import type { OrderCapabilities, OrderDetail } from "../api/orders";
 import { useI18n } from "../i18n/context";
 import { OrderActivity } from "./OrderActivity";
 import { FieldError, OrderLineEditor } from "./OrderLineEditor";
-import { orderPath, type OrderDraft } from "./model";
+import { addressLabel, orderPath, snapshotOption, type OrderDraft } from "./model";
 import { useOrderEditor } from "./useOrderEditor";
 
 export function OrderPage({ api, id, companyId, capabilities, canCompanyView, navigate, onDirty }: {
@@ -62,6 +62,8 @@ export function OrderPage({ api, id, companyId, capabilities, canCompanyView, na
     element.addEventListener("keydown", listener);
     return () => element.removeEventListener("keydown", listener);
   }, [e.loading]);
+  // A frozen (finalized/cancelled) order shows its historical snapshot, never live company records.
+  const frozenOrder = e.frozen ? e.detail?.order : undefined;
   const selector = (key: "contactId" | "billingAddressId" | "deliveryAddressId", label: string, options: { id: string; label: string }[]) =>
     <label>{label}<select value={e.draft[key]} onChange={event => e.change({ [key]: event.target.value })}>
       <option value="">{o.none}</option>
@@ -109,9 +111,12 @@ export function OrderPage({ api, id, companyId, capabilities, canCompanyView, na
           <label>{o.currency}<select value={e.draft.currencyCode} disabled={e.currencyIsLocked} onChange={event => e.change({ currencyCode: event.target.value as OrderDraft["currencyCode"] })}>
             <option value="RON">RON</option><option value="EUR">EUR</option></select></label>
           <label>{o.customerReference}<input maxLength={160} value={e.draft.customerReference} onChange={event => e.change({ customerReference: event.target.value })} /><FieldError reason={e.fields.customerReference} /></label>
-          {selector("contactId", o.contact, (company?.contacts ?? []).filter(c => c.status === "active").map(c => ({ id: c.id, label: c.name })))}
-          {selector("billingAddressId", o.billing, (company?.addresses ?? []).filter(a => a.status === "active" && a.type === "billing").map(a => ({ id: a.id, label: `${a.label ?? ""} ${a.city} · ${a.addressLine1}` })))}
-          {selector("deliveryAddressId", o.delivery, (company?.addresses ?? []).filter(a => a.status === "active" && a.type === "delivery").map(a => ({ id: a.id, label: `${a.label ?? ""} ${a.city} · ${a.addressLine1}` })))}
+          {selector("contactId", o.contact, frozenOrder ? snapshotOption(frozenOrder.contactSnapshot, "contact") :
+            (company?.contacts ?? []).filter(c => c.status === "active").map(c => ({ id: c.id, label: c.name })))}
+          {selector("billingAddressId", o.billing, frozenOrder ? snapshotOption(frozenOrder.billingAddressSnapshot, "address") :
+            (company?.addresses ?? []).filter(a => a.status === "active" && a.type === "billing").map(a => ({ id: a.id, label: addressLabel(a) })))}
+          {selector("deliveryAddressId", o.delivery, frozenOrder ? snapshotOption(frozenOrder.deliveryAddressSnapshot, "address") :
+            (company?.addresses ?? []).filter(a => a.status === "active" && a.type === "delivery").map(a => ({ id: a.id, label: addressLabel(a) })))}
         </div>
         {e.currencyIsLocked && !e.frozen && <p className="muted">{o.currencyHint}</p>}
         <div className="grid-2">{(["notes", "productionNotes"] as const).map(key => <label key={key}>{o[key]}<textarea maxLength={2000} value={e.draft[key]} onChange={event => e.change({ [key]: event.target.value })} /><FieldError reason={e.fields[key]} /></label>)}</div>
@@ -167,7 +172,7 @@ function OrderConfirmation({ detail, action, busy, onConfirm, onClose }: {
   return <dialog className="order-dialog" ref={dialog} aria-labelledby="order-confirm-title" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
     <h2 id="order-confirm-title">{action === "finalize" ? o.finalizeQuestion : o.cancelQuestion}</h2>
     <CompanySnapshot detail={detail} />
-    <p>{detail.order.code} · {detail.order.lines.length} {o.lines} · {detail.order.currencyCode}</p>
+    <p>{detail.order.code} · {o.lineCount(detail.order.lines.length)} · {detail.order.currencyCode}</p>
     <dl className="order-summary">{(["net", "vat", "gross"] as const).map(k => <div key={k}><dt>{o[k]}</dt><dd>{detail.order.calculation.totals?.[k] ?? "—"} {detail.order.currencyCode}</dd></div>)}</dl>
     <p>{action === "finalize" ? o.freezeHint : o.cancelHint}</p><p className="muted">{o.productionBoundary}</p>
     <div className="order-actions"><button type="button" className="button button-secondary" disabled={busy} onClick={onClose}>{o.cancel}</button>

@@ -4,6 +4,8 @@ Wholesale sales management for Arasya (`https://b2b.arasyahome.ro`). Romanian: *
 
 Arasya B2B is an internal application for Arasya employees who manage wholesale customers. It is not a customer portal.
 
+Version 0.3.1 is a corrective release found in production acceptance: finalized and cancelled orders show their historical contact and address snapshots in the header (never "selected record unavailable"), line counts use correct Romanian and Turkish plural forms ("1 produs", "3 produse", "20 de produse"; "3 ürün"), and the home page names both available modules, Companies and Orders. It pairs with Operations API 2.9.1, which records `line_updated` activity only for real line changes.
+
 Version 0.3.0 adds [Classic / Quick Order Builder V1](docs/classic-orders.md): explicit commercial draft saving, up to 100 stable product rows, exact RON/EUR pricing, finalization/cancellation with frozen snapshots, duplication and company order history. It extends Companies V1 on the existing central identity. Requires Operations API 2.9.0 / migration 010 and Dashboard 0.5.2 permission labels. No production submission, ledger, payment, inventory or source writeback.
 
 ## Companies 0.2.0

@@ -16,11 +16,13 @@ export function OrderActivity({ api, id, version }: { api: B2bApi; id: string; v
     try { const next = await api.orderActivity(id, page?.nextCursor); setPage(old => ({ ...next, items: [...(old?.items ?? []), ...next.items] })); }
     catch (e) { setError(e); } finally { setBusy(false); }
   };
+  // Server keys map only to plain message strings; anything else falls back to a generic label.
+  const text = (key: string) => { const value = Object.hasOwn(o, key) ? (o as Record<string, unknown>)[key] : undefined; return typeof value === "string" ? value : undefined; };
   return <section className="card"><h2>{o.activity}</h2>{error !== null && <p role="alert">{problem(error)}</p>}
     <ol className="timeline">{page?.items.map(a => <li key={a.id}>
-      <strong>{Object.hasOwn(o, a.action) ? o[a.action as keyof typeof o] : o.unknownActivity}</strong>
+      <strong>{text(a.action) ?? o.unknownActivity}</strong>
       <p>{a.actor.displayName} · {dateTime(a.occurredAt)}</p>
-      <p className="muted">{o.changedFields}: {a.changedFields.map(f => Object.hasOwn(o, f) ? o[f as keyof typeof o] : o.details).join(", ")}</p>
+      <p className="muted">{o.changedFields}: {a.changedFields.map(f => text(f) ?? o.details).join(", ")}</p>
     </li>)}</ol>{page?.nextCursor && <button type="button" className="button button-secondary" disabled={busy} onClick={() => void more()}>{o.more}</button>}
   </section>;
 }

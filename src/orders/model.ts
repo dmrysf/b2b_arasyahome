@@ -48,3 +48,14 @@ export function ordersRoute(path: string): null | { kind: "list" | "create" } | 
   const match = /^\/comenzi\/([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/.exec(p);
   return match ? { kind: "detail", id: match[1] } : null;
 }
+
+const text = (v: unknown) => typeof v === "string" ? v : "";
+/** One label format for live addresses and address snapshots. */
+export function addressLabel(a: { label?: unknown; city?: unknown; addressLine1?: unknown }): string {
+  return `${text(a.label)} ${text(a.city)} · ${text(a.addressLine1)}`;
+}
+/** The selector option of a frozen order: its historical contact/address snapshot, never a live record. */
+export function snapshotOption(snapshot: Record<string, unknown> | null | undefined, kind: "contact" | "address"): { id: string; label: string }[] {
+  if (!snapshot || typeof snapshot.id !== "string") return [];
+  return [{ id: snapshot.id, label: kind === "contact" ? text(snapshot.name) : addressLabel(snapshot) }];
+}

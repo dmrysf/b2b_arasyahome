@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createApi } from '../src/api/client';
 import { mapCalculation, mapOrderDetail, ORDER_PERMISSIONS, type LineInput } from '../src/api/orders';
-import { emptyLine, emptyOrder, orderFields, currencyLocked, LatestCalculation } from '../src/orders/model';
+import { emptyLine, emptyOrder, orderFields, currencyLocked, LatestCalculation, addressLabel, snapshotOption } from '../src/orders/model';
+import { MESSAGES } from '../src/i18n';
+import { plural } from '../src/i18n/plural';
 import { fakeFetch, sessionPayload, API, accessPayload } from './support';
 
 const line: LineInput = { id:'00000000-0000-4000-8000-000000000001',productCode: 'P1', productName: null, variant: null, color: null, kind: 'curtain', width: null, height: null, quantity: 4, meters: '13.5', pricingUnit: 'meter', unitPriceNet: '10.00', discountPercent: '0', vatPercent: '19', notes: null,productionNotes:null };
@@ -52,4 +54,27 @@ test('all order endpoints use canonical envelopes and authenticated mutation hea
  await api.reorderOrderLines('id',[line.id!],6,{idempotencyKey:'same-line-intent-4'});
  assert.deepEqual(fake.calls.at(-1)!.body,{lineIds:[line.id],expectedVersion:6});
  await api.orderActivity('id');
+});
+
+test('line counts follow Romanian and Turkish plural rules from one central helper', () => {
+  const ro = MESSAGES.ro.orders.lineCount, tr = MESSAGES.tr.orders.lineCount;
+  assert.deepEqual([1, 2, 19, 20, 100, 101, 119, 120].map(ro),
+    ['1 produs', '2 produse', '19 produse', '20 de produse', '100 de produse', '101 produse', '119 produse', '120 de produse']);
+  assert.deepEqual([1, 3, 100].map(tr), ['1 ürün', '3 ürün', '100 ürün']);
+  assert.equal(plural('ro', 0, { one: '{n} x', other: '{n} y' }), '0 y');
+});
+
+test('frozen order selectors use the historical snapshot, never a missing live record', () => {
+  assert.deepEqual(snapshotOption({ id: 'c1', name: 'Ana Istoric', email: 'a@x.ro' }, 'contact'), [{ id: 'c1', label: 'Ana Istoric' }]);
+  assert.deepEqual(snapshotOption({ id: 'a1', label: 'Depozit', city: 'Cluj', addressLine1: 'Str. 1' }, 'address'), [{ id: 'a1', label: 'Depozit Cluj · Str. 1' }]);
+  assert.deepEqual(snapshotOption(null, 'contact'), []);
+  assert.deepEqual(snapshotOption({ name: 'no id' }, 'contact'), []);
+  assert.equal(addressLabel({ label: null, city: 'Iași', addressLine1: 'Str. 2' }), ' Iași · Str. 2');
+});
+
+test('the home page names both available modules in Romanian and Turkish', () => {
+  assert.match(MESSAGES.ro.home.foundationBody, /Companii și Comenzi/);
+  assert.doesNotMatch(MESSAGES.ro.home.foundationBody, /Primul modul disponibil/);
+  assert.match(MESSAGES.tr.home.foundationBody, /Şirketler ve Siparişler/);
+  assert.doesNotMatch(MESSAGES.tr.home.foundationBody, /İlk kullanılabilir modül/);
 });

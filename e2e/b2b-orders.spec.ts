@@ -125,3 +125,48 @@ test('lost successful response replays one intent and pending writes freeze ever
  await expect(page.locator('.order-line')).toHaveCount(2);
  await expect(page.getByLabel('Cod produs 2',{exact:true})).toBeFocused();
 });
+
+test('frozen orders show their historical contact and addresses, and line counts are grammatical in RO and TR', async ({ page }) => {
+  const api = await mockApi(page, { loggedIn: true, permissions: [...perms, 'b2b.companies.update'] });
+  const companyId = api.companies.seed({ legalName: 'Snapshot SRL', taxIdentifier: '5555' });
+  const post = (section: string, body: Record<string, unknown>) =>
+    expect(api.companies.handle('POST', `/b2b/companies/${companyId}/${section}`, new URLSearchParams(), body, crypto.randomUUID()).status).toBe(201);
+  post('contacts', { name: 'Ana Istoric', jobTitle: null, email: null, phone: null, isPrimary: true });
+  const address = (type: string, city: string) => ({ type, label: null, countryCode: 'RO', countyRegion: null, city, postalCode: null, addressLine1: `Str. ${city} 1`, addressLine2: null, isPrimary: true });
+  post('addresses', address('billing', 'Cluj'));
+  post('addresses', address('delivery', 'Iași'));
+  const [contact] = api.companies.contacts.get(companyId)!;
+  const [billing, delivery] = api.companies.addresses.get(companyId)!;
+  const line = (code: string) => ({ ...orderFields({ ...emptyOrder(companyId), lines: [{ ...emptyLine(), productCode: code, quantity: '1', unitPriceNet: '1.00', vatPercent: '19' }] }).lines[0], id: null });
+  const fields = { ...orderFields(emptyOrder(companyId)), contactId: contact.id, billingAddressId: billing.id, deliveryAddressId: delivery.id, lines: [line('ONE')] };
+  const order = api.orders.seed(fields);
+  expect(api.orders.handle('POST', `/b2b/orders/${order.id}/finalize`, new URLSearchParams(), { expectedVersion: 1 }, crypto.randomUUID()).status).toBe(200);
+  // The live contact changes after finalization; the order keeps the historical name.
+  contact.name = 'Nume Nou Live';
+
+  await page.goto(`/comenzi/${order.id}`);
+  await expect(page.getByLabel('Cod produs 1', { exact: true })).toBeDisabled();
+  const selected = (label: string) => page.locator('label').filter({ hasText: label }).locator('select option:checked');
+  await expect(selected('Persoană de contact')).toHaveText('Ana Istoric');
+  await expect(selected('Adresă de facturare')).toHaveText(/Cluj · Str\. Cluj 1/);
+  await expect(selected('Adresă de livrare')).toHaveText(/Iași · Str\. Iași 1/);
+  await expect(page.getByText('Înregistrare selectată indisponibilă')).toHaveCount(0);
+  await expect(page.getByText('Nume Nou Live')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Anulează comanda', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText(`${order.code} · 1 produs · RON`);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'TR — Türkçe' }).click();
+  await expect(page.getByText('Seçili kayıt kullanılamıyor')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Siparişi iptal et', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText(`${order.code} · 1 ürün · RON`);
+  await page.keyboard.press('Escape');
+
+  const draft = api.orders.seed({ ...fields, lines: [line('A'), line('B'), line('C')] });
+  await page.goto(`/comenzi/${draft.id}`);
+  await page.getByRole('button', { name: 'Siparişi iptal et', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText(`${draft.code} · 3 ürün · RON`);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'RO — Română' }).click();
+  await page.getByRole('button', { name: 'Anulează comanda', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText(`${draft.code} · 3 produse · RON`);
+});

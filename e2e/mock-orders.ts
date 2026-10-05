@@ -101,6 +101,15 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
           if (!order.calculation.complete) return fail(422, "VALIDATION_FAILED");
           order.status = "finalized"; order.finalizedAt = new Date().toISOString(); order.finalizedBy = actor;
           order.companySnapshot = snapshot(order.companyId)!;
+          // Like the server, freeze the selected contact and addresses with the fields the API returns.
+          const pick = (list: Record<string, unknown>[] | undefined, id: string | null, keys: string[]) => {
+            const record = list?.find(item => item.id === id && item.status === "active");
+            return record ? Object.fromEntries(["id", ...keys].map(key => [key, record[key] ?? null])) : null;
+          };
+          const addressKeys = ["type", "label", "countryCode", "countyRegion", "city", "postalCode", "addressLine1", "addressLine2"];
+          order.contactSnapshot = pick(companies.contacts.get(order.companyId), order.contactId, ["name", "jobTitle", "email", "phone"]);
+          order.billingAddressSnapshot = pick(companies.addresses.get(order.companyId), order.billingAddressId, addressKeys);
+          order.deliveryAddressSnapshot = pick(companies.addresses.get(order.companyId), order.deliveryAddressId, addressKeys);
         } else if (action === "cancel") { order.status = "cancelled"; order.cancelledAt = new Date().toISOString(); }
         else if (method === "PUT" && !action) {
           const fields = body as OrderFields;
