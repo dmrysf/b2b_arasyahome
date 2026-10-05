@@ -333,3 +333,55 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
   .order-page,.order-line,.order-success,.order-dialog,.order-line-grid input[aria-invalid="true"] { animation: none; }
   .order-page *, .order-list-page * { transition: none; scroll-behavior: auto; }
 }
+
+/* Current account (0.4.0) */
+.account-panel { display: grid; gap: 16px; min-width: 0; }
+.account-balances { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.account-balance-value { display: grid; gap: 2px; }
+.account-balance-value strong { font-size: 24px; letter-spacing: -0.01em; }
+.balance-owes .account-balance-value strong, .account-amount.balance-owes { color: var(--ink); }
+.balance-credit .account-balance-value strong, .account-amount.balance-credit { color: var(--success); }
+.balance-settled .account-balance-value strong, .account-amount.balance-settled { color: var(--muted); }
+.account-actions { padding: 2px 0; }
+.account-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.account-fieldset { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; display: grid; gap: 10px; min-width: 0; margin: 0; }
+.account-fieldset legend { font-weight: 600; padding: 0 4px; }
+.account-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.account-filters:has(> :nth-child(3):last-child) { grid-template-columns: 2fr repeat(2, minmax(0, 1fr)); }
+.table-scroll { overflow-x: auto; min-width: 0; }
+.account-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.account-table caption { text-align: left; padding: 4px 0 10px; color: var(--muted); }
+.account-table th, .account-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.account-table th { color: var(--muted); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.account-table .num { text-align: right; white-space: nowrap; }
+.account-table input { height: 34px; min-width: 96px; text-align: right; }
+.statement-edge td { background: #f8f9fb; font-weight: 600; }
+.movement-list, .allocation-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.movement-list > li { border-bottom: 1px solid var(--line); }
+.movement-list > li:last-child { border-bottom: 0; }
+.movement { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; padding: 12px 0; }
+.movement.is-reversed .movement-title strong, .movement.is-reversed .amount strong { text-decoration: line-through; text-decoration-color: var(--muted); }
+.movement-title { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.movement-amount { display: grid; justify-items: end; gap: 4px; align-content: start; }
+.movement-amount .form-actions { justify-content: flex-end; }
+.movement > .inline-form, .movement > .movement-details, .movement > .hint { grid-column: 1 / -1; }
+.amount-debit strong { color: var(--ink); }
+.amount-credit strong { color: var(--success); }
+.movement-details { display: grid; gap: 8px; padding: 10px 12px; background: #fbfbfc; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.movement-details h3, .inline-form h3 { font-size: 14px; }
+.allocation-list li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.allocation-list li:last-child { border-bottom: 0; }
+.allocation-list li.is-released { color: var(--muted); }
+.form-error ul { margin: 4px 0 0; padding-left: 18px; }
+@media (max-width: 960px) {
+  .account-balances { grid-template-columns: minmax(0, 1fr); }
+  .account-form-grid, .account-filters, .account-filters:has(> :nth-child(3):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .account-form-grid, .account-filters, .account-filters:has(> :nth-child(3):last-child) { grid-template-columns: minmax(0, 1fr); }
+  .movement { grid-template-columns: minmax(0, 1fr); }
+  .movement-amount { justify-items: start; }
+  .movement-amount .form-actions { justify-content: flex-start; }
+}
+.account-table td.mono, .account-table .mono { white-space: nowrap; }
+.statement-table { min-width: 760px; }

@@ -1,6 +1,7 @@
 import { expect, test, request } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { OrderDetail, OrderFields } from "../src/api/orders";
 
 const fixture = JSON.parse(readFileSync(new URL("./.real-api-fixture.json", import.meta.url), "utf8")) as {
@@ -8,7 +9,7 @@ const fixture = JSON.parse(readFileSync(new URL("./.real-api-fixture.json", impo
   orderUser: { username: string; temporaryPassword: string };
 };
 const API = "http://127.0.0.1:8789";
-const snapshot = () => JSON.parse(execFileSync("php", [new URL("./db-snapshot.php", import.meta.url).pathname], { encoding: "utf8", env: process.env })) as Record<string, unknown>;
+const snapshot = () => JSON.parse(execFileSync("php", [fileURLToPath(new URL("./db-snapshot.php", import.meta.url))], { encoding: "utf8", env: process.env })) as Record<string, unknown>;
 const production = () => Object.fromEntries(Object.entries(snapshot()).filter(([key]) => key !== "b2b_companies"));
 
 test("sales identity completes Classic Order lifecycle through real API without touching production", async ({ page }) => {

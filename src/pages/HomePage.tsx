@@ -2,6 +2,7 @@ import type { B2bAccess, Session } from "../api/types";
 import { useI18n } from "../i18n/context";
 import { COMPANIES_PATH } from "../companies/shared";
 import { PLANNED_MODULES } from "../layout/modules";
+import { ACCOUNTS_PATH } from "../accounts/model";
 
 /** The landing page: the identity B2B received from Central IAM and the modules. No business data. */
 export function HomePage({ access, session, navigate }: { access: B2bAccess; session: Session; navigate: (path: string) => void }) {
@@ -39,6 +40,7 @@ export function HomePage({ access, session, navigate }: { access: B2bAccess; ses
               </li>
             )}
             {access.permissions.some(p => p.startsWith("b2b.orders.")) && <li><a className="link" href="/comenzi" onClick={event => { event.preventDefault(); navigate("/comenzi"); }}>{t.shell.modules.orders}</a><span className="badge badge-success">{h.available}</span></li>}
+            {access.permissions.includes("b2b.accounts.view") && <li><a className="link" href={ACCOUNTS_PATH} onClick={event => { event.preventDefault(); navigate(ACCOUNTS_PATH); }}>{t.shell.modules.accounts}</a><span className="badge badge-success">{h.available}</span></li>}
             {PLANNED_MODULES.map((key) => <li key={key}><span>{t.shell.modules[key]}</span><span className="soon">{t.shell.planned}</span></li>)}
           </ul>
         </section>

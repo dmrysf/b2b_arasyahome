@@ -42,12 +42,14 @@ test("the shell shows the B2B brand, the identity from Central IAM and logout", 
   assert.match(text(shell("ro", true)), /Administrator principal/);
 });
 
-test("company-only grants do not offer Orders; future modules remain placeholders", () => {
+test("company-only grants offer neither Orders nor Current Accounts; future modules remain placeholders", () => {
   const html = shell("ro");
   const links = [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual([...new Set(links)], ["/", "/companii"], "navigation links: home and Companies");
-  for (const label of ["Panou de control", "Companii", "Conturi curente", "Proiecte", "Produse", "Rapoarte"]) assert.match(text(html), new RegExp(label));
-  assert.equal(PLANNED_MODULES.length, 5);
+  for (const label of ["Panou de control", "Companii", "Proiecte", "Produse", "Rapoarte"]) assert.match(text(html), new RegExp(label));
+  assert.doesNotMatch(text(html), /Conturi curente (În curând|Disponibil)/, "not a placeholder and not offered without permission");
+  assert.equal(PLANNED_MODULES.length, 4);
+  assert.ok(!PLANNED_MODULES.includes("accounts" as never));
   assert.ok(!PLANNED_MODULES.includes("orders" as never));
   assert.ok(!PLANNED_MODULES.includes("companies" as never));
   assert.match(text(html), /În curând/);
@@ -63,7 +65,7 @@ test("without a company permission the Companies module is not offered", () => {
 });
 
 test("the shell is complete in Turkish", () => {
-  const html = text(shell("tr", false, [...access.permissions, "b2b.orders.view"]));
+  const html = text(shell("tr", false, [...access.permissions, "b2b.orders.view", "b2b.accounts.view"]));
   for (const label of ["Toptan Satış Yönetimi", "Hoş geldiniz, Elena Vânzări.", "Ana sayfa", "Yakında", "Şirketler", "Siparişler", "Cari hesaplar", "Projeler", "Ürünler", "Raporlar", "Çıkış yap", "B2B erişimi"]) {
     assert.ok(html.includes(label), label);
   }

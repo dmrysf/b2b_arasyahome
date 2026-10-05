@@ -15,15 +15,16 @@ import { COMPANIES_PATH, PrimaryBadge, StatusBadge, SuccessNotice } from "./shar
 import { useEditor, type Conflict } from "./useEditor";
 import type { OrderCapabilities } from "../api/orders";
 import { OrdersPage } from "../orders/OrdersPage";
+import { AccountPanel } from "../accounts/AccountPanel";
 
-type Section = "info" | "contacts" | "addresses" | "notes" | "activity";
+type Section = "info" | "contacts" | "addresses" | "notes" | "activity" | "account";
 const SECTIONS: Section[] = ["info", "contacts", "addresses", "notes", "activity"];
 
 /**
  * One company: identity and fiscal data, contacts, addresses, internal notes and activity, each in its own section
  * so no single form grows huge. Every action is offered only with the matching permission; the server decides.
  */
-export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities }: { api: B2bApi; id: string; navigate: (path: string) => void; flash: string | null; orderCapabilities?: OrderCapabilities }) {
+export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities, canViewAccount = false }: { api: B2bApi; id: string; navigate: (path: string) => void; flash: string | null; orderCapabilities?: OrderCapabilities; canViewAccount?: boolean }) {
   const { t } = useI18n();
   const c = t.companies;
   const [detail, setDetail] = useState<CompanyDetail | null>(null);
@@ -79,9 +80,9 @@ export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities 
       {capabilities.canManageStatus && <CompanyStatusControl api={api} detail={detail} onDone={(result, status) => applied(status === "active" ? c.success.reactivated : c.success.deactivated)(result)} />}
 
       <div className="section-tabs" role="tablist" aria-label={c.title}>
-        {SECTIONS.map((key) => (
+        {(canViewAccount ? [...SECTIONS, "account" as const] : SECTIONS).map((key) => (
           <button key={key} type="button" role="tab" id={`tab-${key}`} aria-selected={section === key} aria-controls={`panel-${key}`} onClick={() => { setSection(key); setNotice(null); }}>
-            {c.sections[key]}{counts[key] !== undefined && <span className="count">{counts[key]}</span>}
+            {key === "account" ? t.accounts.tab : c.sections[key]}{counts[key] !== undefined && <span className="count">{counts[key]}</span>}
           </button>
         ))}
       </div>
@@ -91,6 +92,7 @@ export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities 
         {section === "notes" && <NotesSection api={api} detail={detail} reload={reload} onSaved={applied(c.success.notesSaved)} />}
         {section === "contacts" && <ContactsSection api={api} detail={detail} reload={reload} onChanged={(result, message) => applied(message)(result)} />}
         {section === "addresses" && <AddressesSection api={api} detail={detail} reload={reload} onChanged={(result, message) => applied(message)(result)} />}
+        {section === "account" && canViewAccount && <AccountPanel api={api} companyId={company.id} />}
         {section === "activity" && <ActivitySection key={company.version + detail.contacts.length + detail.addresses.length} api={api} companyId={company.id} />}
       </div>
       {orderCapabilities?.canView && <OrdersPage api={api} companyId={id} canView canCreate={orderCapabilities.canCreate && company.status === "active"} navigate={navigate} />}

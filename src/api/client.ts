@@ -3,6 +3,10 @@ import {
   mapActivity, mapCompanyDetail, mapCompanyList, mapMutation, COMPANY_PERMISSIONS,
   type AddressFields, type CompanyFields, type CompanyPermission, type ContactFields, type StatusFilter,
 } from "./companies";
+import {
+  ACCOUNT_PERMISSIONS, mapAccountActivity, mapAccountMutation, mapAccountOverview, mapAccountSummary, mapMovementDetail, mapMovementPage, mapOpenItems, mapStatement,
+  type AccountCurrency, type EntryInput, type MovementQuery, type OverviewQuery, type PaymentInput, type ReversalInput, type StatementQuery, type AllocationInput,
+} from "./accounts";
 import { ApiError } from "./errors";
 import type { B2bAccess, Session, SessionEmployee } from "./types";
 
@@ -53,7 +57,7 @@ function mapAccess(value: unknown): B2bAccess {
   }
   // Only known module permissions are kept; an older API without the field means "none".
   const permissions = Array.isArray(raw.permissions)
-    ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
+    ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS, ...ACCOUNT_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
     : [];
   return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions };
 }
@@ -64,6 +68,12 @@ export type CompanyQuery = { search?: string; status?: StatusFilter; country?: s
 export type Idempotent = { idempotencyKey: string };
 
 const segment = (id: string) => encodeURIComponent(id);
+const statementParams = (query: StatementQuery) => {
+  const params = new URLSearchParams({ currency: query.currency });
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
+  return params.toString();
+};
 
 export type B2bApi = ReturnType<typeof createApi>;
 export type { CompanyPermission };
@@ -104,6 +114,27 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     }
     if (payload === null) throw new ApiError("INVALID_RESPONSE", response.status);
     return payload as T;
+  }
+
+  /** A file download (statement CSV/PDF). Errors are read like any other request; the body is never parsed as JSON on success. */
+  async function requestFile(path: string): Promise<Blob> {
+    let response: Response;
+    try {
+      response = await fetchImpl(new URL(path, baseUrl).toString(), { method: "GET", headers: { Accept: "text/csv, application/pdf, application/json" }, credentials: "include", cache: "no-store" });
+    } catch {
+      throw new ApiError("NETWORK_UNAVAILABLE", 0);
+    }
+    if (!response.ok) {
+      let payload: unknown = null;
+      try { payload = await response.json(); } catch { /* handled below */ }
+      const error = payload && typeof payload === "object" ? (payload as { error?: { code?: unknown; details?: unknown } }).error : undefined;
+      const code = typeof error?.code === "string" ? error.code : response.status >= 500 ? "SERVER_ERROR" : "REQUEST_FAILED";
+      const failure = new ApiError(code, response.status, undefined, error?.details);
+      if (SESSION_CODES.has(code)) csrfToken = "";
+      if (SESSION_CODES.has(code) || ACCESS_CHANGED_CODES.has(code)) listeners.forEach((listener) => listener(failure));
+      throw failure;
+    }
+    return response.blob();
   }
 
   const withSession = async (promise: Promise<unknown>): Promise<Session> => {
@@ -156,6 +187,46 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     reorderOrderLines: async (id: string, lineIds: string[], expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/lines/reorder`,{method:'POST',body:{lineIds,expectedVersion},idempotencyKey})),
     duplicateOrder: async (id: string, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}/duplicate`,{method:'POST',body:{expectedVersion},idempotencyKey})),
     orderActivity: async (id: string, cursor?: string|null) => mapActivity(await request(`/b2b/orders/${segment(id)}/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`)),
+
+    accountsOverview: async (query: OverviewQuery = {}) => {
+      const params = new URLSearchParams();
+      if (query.search?.trim()) params.set("search", query.search.trim());
+      if (query.status && query.status !== "all") params.set("status", query.status);
+      if (query.balance && query.balance !== "all") params.set("balance", query.balance);
+      if (query.cursor) params.set("cursor", query.cursor);
+      if (query.limit) params.set("limit", String(query.limit));
+      return mapAccountOverview(await request(`/b2b/accounts${params.size ? `?${params}` : ""}`));
+    },
+    accountSummary: async (companyId: string) => mapAccountSummary(await request(`/b2b/accounts/${segment(companyId)}`)),
+    accountMovements: async (companyId: string, query: MovementQuery = {}) => {
+      const params = new URLSearchParams();
+      if (query.currency && query.currency !== "all") params.set("currency", query.currency);
+      if (query.type && query.type !== "all") params.set("type", query.type);
+      if (query.from) params.set("from", query.from);
+      if (query.to) params.set("to", query.to);
+      if (query.cursor) params.set("cursor", query.cursor);
+      if (query.limit) params.set("limit", String(query.limit));
+      return mapMovementPage(await request(`/b2b/accounts/${segment(companyId)}/movements${params.size ? `?${params}` : ""}`));
+    },
+    accountMovement: async (companyId: string, movementId: string) => mapMovementDetail(await request(`/b2b/accounts/${segment(companyId)}/movements/${segment(movementId)}`)),
+    accountOpenItems: async (companyId: string, currency: AccountCurrency) => mapOpenItems(await request(`/b2b/accounts/${segment(companyId)}/open-items?currency=${currency}`)),
+    accountStatement: async (companyId: string, query: StatementQuery) => mapStatement(await request(`/b2b/accounts/${segment(companyId)}/statement?${statementParams(query)}`)),
+    accountActivity: async (companyId: string, cursor?: string | null) => mapAccountActivity(await request(`/b2b/accounts/${segment(companyId)}/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`)),
+    /** The server renders the statement file from its own dataset; the browser only saves the bytes. */
+    accountStatementFile: (companyId: string, format: "csv" | "pdf", query: StatementQuery & { lang: "ro" | "tr" }) =>
+      requestFile(`/b2b/accounts/${segment(companyId)}/statement.${format}?${statementParams(query)}&lang=${query.lang}`),
+    recordPayment: async (companyId: string, fields: PaymentInput, { idempotencyKey }: Idempotent) =>
+      mapAccountMutation(await request(`/b2b/accounts/${segment(companyId)}/payments`, { method: "POST", body: fields, idempotencyKey })),
+    allocatePayment: async (companyId: string, paymentId: string, allocations: AllocationInput[], { idempotencyKey }: Idempotent) =>
+      mapAccountMutation(await request(`/b2b/accounts/${segment(companyId)}/allocations`, { method: "POST", body: { paymentId, allocations }, idempotencyKey })),
+    releaseAllocation: async (companyId: string, allocationId: string, reason: string, { idempotencyKey }: Idempotent) =>
+      mapAccountMutation(await request(`/b2b/accounts/${segment(companyId)}/allocations/${segment(allocationId)}/release`, { method: "POST", body: { reason }, idempotencyKey })),
+    postOpeningBalance: async (companyId: string, fields: EntryInput, { idempotencyKey }: Idempotent) =>
+      mapAccountMutation(await request(`/b2b/accounts/${segment(companyId)}/opening-balances`, { method: "POST", body: fields, idempotencyKey })),
+    postAdjustment: async (companyId: string, fields: EntryInput, { idempotencyKey }: Idempotent) =>
+      mapAccountMutation(await request(`/b2b/accounts/${segment(companyId)}/adjustments`, { method: "POST", body: fields, idempotencyKey })),
+    reverseMovement: async (companyId: string, movementId: string, fields: ReversalInput, { idempotencyKey }: Idempotent) =>
+      mapAccountMutation(await request(`/b2b/accounts/${segment(companyId)}/movements/${segment(movementId)}/reverse`, { method: "POST", body: fields, idempotencyKey })),
 
     listCompanies: async (query: CompanyQuery = {}) => {
       const params = new URLSearchParams();

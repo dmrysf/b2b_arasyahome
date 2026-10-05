@@ -72,9 +72,9 @@ test('frozen order selectors use the historical snapshot, never a missing live r
   assert.equal(addressLabel({ label: null, city: 'Iași', addressLine1: 'Str. 2' }), ' Iași · Str. 2');
 });
 
-test('the home page names both available modules in Romanian and Turkish', () => {
-  assert.match(MESSAGES.ro.home.foundationBody, /Companii și Comenzi/);
+test('the home page names the available modules in Romanian and Turkish', () => {
+  assert.match(MESSAGES.ro.home.foundationBody, /Companii, Comenzi .* și Conturi curente/);
   assert.doesNotMatch(MESSAGES.ro.home.foundationBody, /Primul modul disponibil/);
-  assert.match(MESSAGES.tr.home.foundationBody, /Şirketler ve Siparişler/);
+  assert.match(MESSAGES.tr.home.foundationBody, /Şirketler, Siparişler .* ve Cari hesaplar/);
   assert.doesNotMatch(MESSAGES.tr.home.foundationBody, /İlk kullanılabilir modül/);
 });

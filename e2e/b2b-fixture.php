@@ -5,7 +5,7 @@ declare(strict_types=1);
 // Builds a disposable database for the B2B real-API Chromium suite with the real Operations API code checked out
 // at ./operations-api (pinned in e2e/operations-api.ref), bootstraps the single protected root identity through
 // the real CLI service and creates controlled identities through the real management API: one with B2B access and
-// a "B2B sales" role holding the four company permissions, and one with Staff access only. It refuses any database
+// a "B2B sales" role holding the four company permissions, one with order permissions, one with current account permissions, and one with Staff access only. It refuses any database
 // whose name does not contain both "e2e" and "test", never touches production and creates no orders or companies.
 
 use Arasya\Operations\Application\Container;
@@ -81,11 +81,17 @@ $orderRole = (int) $call('POST', '/management/roles', [
     'permissions' => ['b2b.companies.view', 'b2b.orders.view', 'b2b.orders.create', 'b2b.orders.update', 'b2b.orders.manage_status'],
 ], $root)['body']['role']['id'];
 
+$accountRole = (int) $call('POST', '/management/roles', [
+    'name' => 'Conturi curente B2B (E2E)', 'description' => null, 'authorityRank' => 200,
+    'permissions' => ['b2b.companies.view', 'b2b.orders.view', 'b2b.accounts.view', 'b2b.accounts.record_payment', 'b2b.accounts.adjust', 'b2b.accounts.reverse', 'b2b.accounts.export'],
+], $root)['body']['role']['id'];
+
 echo json_encode([
     'origins' => ['b2b' => $b2bOrigin, 'admin' => $adminOrigin],
     'root' => ['username' => RootBootstrapService::ROOT_USERNAME, 'password' => $rootPassword],
     'b2bUser' => $create('Elena Vânzări', 'elena.vanzari.e2e', ['b2b'], [], [$salesRole]),
     'salesRoleId' => $salesRole,
     'orderUser' => $create('Ana Comenzi', 'ana.comenzi.e2e', ['b2b'], [], [$orderRole]),
+    'accountUser' => $create('Ioana Contabil', 'ioana.conturi.e2e', ['b2b'], [], [$accountRole]),
     'staffUser' => $create('Mihai Atelier', 'mihai.atelier.e2e', ['staff'], ['waiting']),
 ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), "\n";

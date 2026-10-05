@@ -18,6 +18,8 @@ Repository variable `VITE_B2B_API_BASE_URL` must be `https://api.arasyahome.ro`.
 
 ## Prerequisites
 
+B2B 0.4.0 requires Operations API 2.10.0 with migration 011 and Dashboard 0.5.3 permission labels. Back up the production database and configuration, deploy the verified API, run `php bin/migrate.php` and `php bin/readiness.php` (confirm `b2b_account_permissions`), deploy Dashboard, let root grant the `b2b.accounts.*` permissions to roles, then deploy B2B. Roll back B2B to 0.3.1 before the API to 2.9.1; keep migration 011 and every ledger row (orders finalized or cancelled under 2.9.1 post no ledger rows).
+
 B2B 0.3.1 (corrective, frontend only) is deployed after Operations API 2.9.1 (corrective, no migration, no seed). Neither changes the schema or permissions; roll back to B2B 0.3.0 and API 2.9.0 if needed.
 
 B2B 0.3.0 requires Operations API 2.9.0 with migrations 008–010 and Dashboard 0.5.2 permission labels. Back up the production DB/config manually, deploy the verified API code, then manually run migrate/seed/readiness; confirm b2b_order_permissions and existing readiness checks. Deploy Dashboard and explicitly grant roles/application access before B2B. Exact allowed origins remain Staff, Dashboard and B2B; never deploy B2B before the required API. e2e/operations-api.ref pins its real-API source.

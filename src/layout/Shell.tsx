@@ -5,6 +5,7 @@ import { BrandMark, LocaleSwitcher } from "../components/ui";
 import { B2B_VERSION } from "../version";
 import { COMPANIES_PATH } from "../companies/shared";
 import { PLANNED_MODULES } from "./modules";
+import { ACCOUNTS_PATH } from "../accounts/model";
 
 export function Shell({ access, pathname, navigate, onLogout, children }: { access: B2bAccess; pathname: string; navigate: (path: string) => void; onLogout: () => void; children: ReactNode }) {
   const { t } = useI18n();
@@ -23,6 +24,8 @@ export function Shell({ access, pathname, navigate, onLogout, children }: { acce
           )}
           {access.permissions.some(p => p.startsWith("b2b.orders.")) && <a href="/comenzi" className={pathname.startsWith("/comenzi") ? "active" : ""}
             aria-current={pathname.startsWith("/comenzi") ? "page" : undefined} onClick={event => { event.preventDefault(); setOpen(false); navigate("/comenzi"); }}>{t.shell.modules.orders}</a>}
+          {access.permissions.includes("b2b.accounts.view") && <a href={ACCOUNTS_PATH} className={pathname.startsWith(ACCOUNTS_PATH) ? "active" : ""}
+            aria-current={pathname.startsWith(ACCOUNTS_PATH) ? "page" : undefined} onClick={event => { event.preventDefault(); setOpen(false); navigate(ACCOUNTS_PATH); }}>{t.shell.modules.accounts}</a>}
           <p className="nav-section">{t.shell.planned}</p>
           <ul className="nav-planned">
             {PLANNED_MODULES.map((key) => (

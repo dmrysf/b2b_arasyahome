@@ -1,9 +1,11 @@
 import { ordersTr } from '../orders/messages';
+import { accountsTr } from '../accounts/messages';
 import type { Messages } from "./ro";
 
 /** Turkish interface text. It must match the Romanian shape exactly; Romanian stays the fallback. */
 export const tr: Messages = {
   orders: ordersTr,
+  accounts: accountsTr,
   locale: { short: "TR", name: "Türkçe", switcher: "Arayüz dili" },
   brand: { name: "Arasya B2B", product: "Toptan Satış Yönetimi", title: "Arasya B2B", notConfigured: "B2B uygulaması yapılandırılmamış." },
   common: {
@@ -55,7 +57,7 @@ export const tr: Messages = {
   home: {
     greeting: (name: string) => `Hoş geldiniz, ${name}.`,
     foundationTitle: "Şirket içi toptan satış uygulaması",
-    foundationBody: "Giriş, erişim ve arayüz dilleri merkezi Arasya hesabı üzerinden çalışır. Şirketler ve Siparişler (hızlı toptan sipariş girişi) modülleri kullanılabilir; diğer modüller adım adım eklenecektir.",
+    foundationBody: "Giriş, erişim ve arayüz dilleri merkezi Arasya hesabı üzerinden çalışır. Şirketler, Siparişler (hızlı toptan sipariş girişi) ve Cari hesaplar modülleri kullanılabilir; diğer modüller adım adım eklenecektir.",
     accountTitle: "Hesabınız",
     accountName: "Ad",
     accountUsername: "Kullanıcı",
@@ -232,7 +234,21 @@ export const tr: Messages = {
     CURRENCY_CHANGE_REQUIRES_EMPTY_PRICING: "Para birimini değiştirmeden önce fiyatları temizleyip taslağı kaydedin.",
     ORDER_CANCELLED: "Sipariş iptal edilmiş ve düzenlenemez.",
     ORDER_LINE_NOT_FOUND: "Satır bulunamadı.",
-    COMPANY_INACTIVE: "Şirket pasif. Yeni sipariş oluşturulamaz.",
+    COMPANY_INACTIVE: "Şirket pasif. Yeni sipariş, açılış bakiyesi veya borç düzeltmesi yapılamaz.",
+    PAYMENT_NOT_FOUND: "Ödeme bulunamadı.",
+    RECEIVABLE_NOT_FOUND: "Eşleştirilecek sipariş şirketin hesabında bulunamadı.",
+    MOVEMENT_NOT_FOUND: "Hareket bulunamadı.",
+    ALLOCATION_NOT_FOUND: "Eşleştirme bulunamadı.",
+    MOVEMENT_REVERSED: "Hareket ters çevrildi ve artık eşleştirilemez.",
+    ALLOCATION_EXCEEDS_PAYMENT: "Eşleştirme, ödemenin eşleşmemiş tutarını aşıyor. Hesabı yeniden yükleyin.",
+    ALLOCATION_EXCEEDS_OUTSTANDING: "Eşleştirme, siparişin kalan tutarını aşıyor. Hesabı yeniden yükleyin.",
+    CURRENCY_MISMATCH: "Ödeme ve sipariş farklı para birimlerinde. Çevrim yapılmaz.",
+    ALLOCATION_ALREADY_RELEASED: "Eşleştirme zaten kaldırılmış.",
+    OPENING_BALANCE_EXISTS: "Bu para biriminde zaten aktif bir açılış bakiyesi var. Önce ters çevirin.",
+    REVERSAL_NOT_REVERSIBLE: "Ters kayıt ters çevrilemez. Yeni bir hareket kaydedin.",
+    ORDER_RECEIVABLE_FOLLOWS_ORDER: "Bir siparişin alacak kaydı sipariş iptal edilerek ters çevrilir.",
+    MOVEMENT_ALREADY_REVERSED: "Hareket zaten ters çevrilmiş.",
+    STATEMENT_TOO_LARGE: "Aralık çok büyük. Daha kısa bir dönem seçin.",
 
     fallback: "İşlem tamamlanamadı.",
     CLIENT_ERROR: "Uygulamada bir hata oluştu. Sayfayı yenileyin.",
