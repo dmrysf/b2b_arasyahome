@@ -78,6 +78,8 @@ test("sales identity completes Classic Order lifecycle through real API without 
   await page.getByRole("button", { name: "Finalizează", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("160.65 RON");
   await page.getByRole("button", { name: "Confirmă finalizarea" }).click();
+  // Wait for the server's finalized state, not only the busy-disabled field, before changing the live company.
+  await expect(page.locator(".order-heading-meta")).toContainText("Finalizată");
   await expect(page.getByLabel("Cod produs 1", { exact: true })).toBeDisabled();
   const updateCompany = await admin.put(`${API}/b2b/companies/${companyId}`, { headers: headers(), data: { ...companyFields, legalName: "Changed live company", expectedVersion: 1 } });
   expect(updateCompany.status()).toBe(200);
