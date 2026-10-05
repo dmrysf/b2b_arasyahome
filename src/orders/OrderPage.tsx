@@ -86,6 +86,8 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
         {order && <span>{o.version} {order.version} · {dateTime(order.updatedAt)}</span>}
         {e.dirty && <span className="unsaved-dot" role="status">{o.unsavedState}</span>}
       </div>
+      {order?.origin && <a className="order-origin" href={`/proiecte/${order.origin.projectId}`} onClick={event => { event.preventDefault(); navigate(`/proiecte/${order.origin!.projectId}`); }}>
+        {t.projects.origin(order.origin.projectCode)} · {order.origin.projectName}</a>}
       {order?.sourceOrderId && <a href={orderPath(order.sourceOrderId)} onClick={event => { event.preventDefault(); navigate(orderPath(order.sourceOrderId!)); }}>{o.source}</a>}
     </header>
     {order && <ProductionCard key={order.id} api={api} order={order} capabilities={productionCapabilities} disabled={e.busy || e.dirty || e.conflict} onSubmitted={e.productionSubmitted} />}
@@ -128,7 +130,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
       <section className="order-lines"><div className="order-section-title"><div><h2>{o.lines} <span className="count">{e.draft.lines.length}</span></h2><p className="muted">{o.measureHint}</p></div>
         {e.editable && <button className="button button-secondary" type="button" disabled={e.draft.lines.length >= 100} onClick={addLine}>{o.addLine}</button>}
       </div><FieldError reason={e.fields.lines} />
-        {e.draft.lines.map((line, index) => <OrderLineEditor key={line.id} line={line} index={index} count={e.draft.lines.length} editable={e.editable}
+        {e.draft.lines.map((line, index) => <OrderLineEditor key={line.id} line={line} index={index} count={e.draft.lines.length} editable={e.editable} origin={order?.origin?.lines[line.id] ?? null}
           fields={e.fields} totals={e.calculation?.lines[index]?.totals ?? null} currency={e.draft.currencyCode} onChange={e.changeLine} onAction={e.lineAction} />)}
         {e.draft.lines.length === 0 && <div className="card empty-lines">{o.firstLine}</div>}
       </section>

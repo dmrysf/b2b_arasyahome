@@ -46,9 +46,12 @@ test("company-only grants offer neither Orders nor Current Accounts; future modu
   const html = shell("ro");
   const links = [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual([...new Set(links)], ["/", "/companii"], "navigation links: home and Companies");
-  for (const label of ["Panou de control", "Companii", "Proiecte", "Produse", "Rapoarte"]) assert.match(text(html), new RegExp(label));
+  for (const label of ["Panou de control", "Companii", "Produse", "Rapoarte"]) assert.match(text(html), new RegExp(label));
+  assert.doesNotMatch(text(html), /Proiecte (În curând|Disponibil)/, "projects are a real module, offered only with permission");
+  assert.doesNotMatch(text(html), /Comandă rapidă|Proiect nou/, "entry points need their create permissions");
   assert.doesNotMatch(text(html), /Conturi curente (În curând|Disponibil)/, "not a placeholder and not offered without permission");
-  assert.equal(PLANNED_MODULES.length, 4);
+  assert.equal(PLANNED_MODULES.length, 3);
+  assert.ok(!PLANNED_MODULES.includes("projects" as never));
   assert.ok(!PLANNED_MODULES.includes("accounts" as never));
   assert.ok(!PLANNED_MODULES.includes("orders" as never));
   assert.ok(!PLANNED_MODULES.includes("companies" as never));
@@ -76,4 +79,16 @@ test("order-only access offers Orders without granting Companies", () => {
   const html = shell("ro", false, ["b2b.orders.view"]);
   assert.match(html, /href="\/comenzi"/);
   assert.doesNotMatch(html, /href="\/companii"/);
+});
+
+test("home separates the quick wholesale order from field project work, each only with its permissions", () => {
+  const all = [...ALL_COMPANY_PERMISSIONS, "b2b.orders.view", "b2b.orders.create", "b2b.projects.view", "b2b.projects.create"] as B2bAccess["permissions"];
+  const html = shell("ro", false, all);
+  assert.match(html, /href="\/comenzi\/noua"[^>]*>.*Comandă rapidă/s);
+  assert.match(html, /href="\/proiecte\/nou"[^>]*>.*Proiect nou/s);
+  assert.match(html, /href="\/proiecte"/);
+  const tr = text(shell("tr", false, all));
+  assert.match(tr, /Hızlı sipariş/); assert.match(tr, /Yeni proje/); assert.match(tr, /Projeler/);
+  const quickOnly = shell("ro", false, [...ALL_COMPANY_PERMISSIONS, "b2b.orders.view", "b2b.orders.create"]);
+  assert.match(quickOnly, /Comandă rapidă/); assert.doesNotMatch(quickOnly, /Proiect nou/);
 });

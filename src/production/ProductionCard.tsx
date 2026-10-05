@@ -4,11 +4,13 @@ import type { Order } from '../api/orders';
 import type { Production, ProductionCapabilities } from '../api/production';
 import { Intent } from '../companies/idempotency';
 import { useI18n } from '../i18n/context';
+import { saveFile } from '../accounts/model';
 
 export function ProductionCard({ api, order, capabilities, disabled, onSubmitted }: {
   api: B2bApi; order: Order; capabilities: ProductionCapabilities; disabled: boolean; onSubmitted: () => void;
 }) {
-  const { t, stageLabel, problem, dateTime } = useI18n(), p = t.production;
+  const { t, stageLabel, problem, dateTime, locale } = useI18n(), p = t.production;
+  const [sheetBusy, setSheetBusy] = useState(false);
   const [production, setProduction] = useState<Production | null>(null), [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false), [confirm, setConfirm] = useState(false);
   const [loading, setLoading] = useState(capabilities.canView);
@@ -51,6 +53,12 @@ export function ProductionCard({ api, order, capabilities, disabled, onSubmitted
     } catch (error) { if (mounted.current) setError(error); }
     finally { lock.current = false; if (mounted.current) setBusy(false); }
   }
+  async function downloadSheet() {
+    setSheetBusy(true); setError(null);
+    try { saveFile(await api.productionSheetFile(order.id, locale), `productie-${order.code}.pdf`); }
+    catch (error) { if (mounted.current) setError(error); }
+    finally { if (mounted.current) setSheetBusy(false); }
+  }
   if (!capabilities.canView && !capabilities.canSubmit) return null;
   return <section className="card production-card" aria-labelledby="production-title">
     <div className="order-section-title"><h2 id="production-title">{p.title}</h2>
@@ -69,6 +77,7 @@ export function ProductionCard({ api, order, capabilities, disabled, onSubmitted
         {production.completedAt && <div><dt>{p.finishedAt}</dt><dd>{dateTime(production.completedAt)}</dd></div>}
         <div><dt>{p.reference}</dt><dd>{production.operationalOrderId}</dd></div>
       </dl>
+      <button type="button" className="button button-secondary" disabled={sheetBusy} onClick={() => void downloadSheet()}>{sheetBusy ? t.projects.downloading : t.projects.productionSheet}</button>
     </>}
     <p className="muted">{submitted ? p.cancelBlocked : order.status === 'draft' ? p.draftHint : order.status === 'cancelled' ? p.cancelledHint : p.hint}</p>
     <p className="muted">{p.operator}</p>

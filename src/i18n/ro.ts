@@ -1,6 +1,7 @@
 import { ordersRo } from '../orders/messages';
 import { accountsRo } from '../accounts/messages';
 import { productionRo } from '../production/messages';
+import { projectsRo } from '../projects/messages';
 /**
  * Romanian interface text: the default and fallback locale, and the reference shape every other locale must match
  * (see `Messages`). Server error codes are only lookup keys here; server text is never shown.
@@ -9,6 +10,7 @@ export const ro = {
   orders: ordersRo,
   accounts: accountsRo,
   production: productionRo,
+  projects: projectsRo,
   locale: { short: "RO", name: "Română", switcher: "Limba interfeței" },
   brand: { name: "Arasya B2B", product: "Management vânzări en-gros", title: "Arasya B2B", notConfigured: "Aplicația B2B nu este configurată." },
   common: {
@@ -60,7 +62,7 @@ export const ro = {
   home: {
     greeting: (name: string) => `Bun venit, ${name}.`,
     foundationTitle: "Aplicația internă pentru vânzări en-gros",
-    foundationBody: "Autentificarea, accesul și limbile interfeței funcționează prin contul central Arasya. Sunt disponibile modulele Companii, Comenzi (introducere rapidă de comenzi en-gros) și Conturi curente; următoarele module vor fi adăugate pe rând.",
+    foundationBody: "Autentificarea, accesul și limbile interfeței funcționează prin contul central Arasya. Sunt disponibile Companii, Comenzi (introducere rapidă en-gros), Proiecte (camere, ferestre, ofertă PDF) și Conturi curente.",
     accountTitle: "Contul dumneavoastră",
     accountName: "Nume",
     accountUsername: "Utilizator",
@@ -232,6 +234,16 @@ export const ro = {
   },
   errors: {
     ORDER_NOT_FOUND: "Comanda nu a fost găsită.",
+    PROJECT_NOT_FOUND: "Proiectul nu a fost găsit.",
+    PROJECT_NODE_NOT_FOUND: "Camera nu mai există în proiect.",
+    PROJECT_CHANGED: "Proiectul a fost modificat între timp. Datele introduse sunt păstrate.",
+    PROJECT_NOT_EDITABLE: "Proiectul este arhivat și nu mai poate fi editat.",
+    PROJECT_STATUS_UNCHANGED: "Proiectul are deja această stare.",
+    PROJECT_LIMIT_EXCEEDED: "Proiectul a atins limita de dimensiune pentru această acțiune.",
+    INVALID_PROJECT_SCOPE: "Alegeți între 1 și 100 de produse din acest proiect.",
+    ORDER_ALREADY_CREATED_FROM_SCOPE: "Unele produse sunt deja într-o comandă. Reîncărcați și alegeți altele.",
+    UNSUPPORTED_TREATMENT: "Acest tip de tratament nu este acceptat.",
+    PRODUCTION_NOT_SUBMITTED: "Comanda nu a fost încă trimisă în producție.",
     ORDER_CHANGED: "Comanda a fost modificată între timp. Datele introduse sunt păstrate.",
     ORDER_FINALIZED: "Comanda a fost deja finalizată.",
     CURRENCY_CHANGE_REQUIRES_EMPTY_PRICING: "Ștergeți prețurile și salvați ciorna înainte de a schimba moneda.",

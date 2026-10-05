@@ -51,7 +51,7 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
     const order: Order = { ...structuredClone(fields), lines: fields.lines.map(line => ({ ...line, id: line.id ?? randomUUID() })), id: randomUUID(),
       code: `B2B-ORD-${String(++sequence).padStart(6, "0")}`, status: "draft", version: 1, sourceOrderId, companySnapshot: snapshot(fields.companyId)!,
       contactSnapshot: null, billingAddressSnapshot: null, deliveryAddressSnapshot: null,
-      createdAt: at, updatedAt: at, finalizedAt: null, cancelledAt: null, createdBy: actor, updatedBy: actor, finalizedBy: null, calculation: calculate(fields) };
+      createdAt: at, updatedAt: at, finalizedAt: null, cancelledAt: null, createdBy: actor, updatedBy: actor, finalizedBy: null, calculation: calculate(fields), origin: null };
     orders.unshift(order); event(order, sourceOrderId ? "order_duplicated" : "order_created"); return order;
   };
   const handle = (method: string, path: string, query: URLSearchParams, body: Record<string, unknown>, key?: string): Reply => {

@@ -4,6 +4,8 @@ Wholesale sales management for Arasya (`https://b2b.arasyahome.ro`). Romanian: *
 
 Arasya B2B is an internal application for Arasya employees who manage wholesale customers. It is not a customer portal.
 
+Version 0.6.0 adds [Projects](docs/projects.md): the home page separates **Comandă rapidă** (the unchanged Classic wholesale workstation) from **Proiect nou** (field projects for hotels, villas, offices, hospitals). A tablet-first workspace edits floors, rooms, openings and treatments with debounced, retrying, version-checked autosave, repeats rooms and windows explicitly, shows a structural 2D sketch from the `arasya.scene/1` contract, downloads a premium proposal PDF and converts selected rooms into a normal Classic draft exactly once. Order pages show the project origin; production cards download the workshop sheet. Requires Operations API 2.12.0 / migration 013, Dashboard 0.5.5 labels and Staff 2.3.3.
+
 Version 0.5.0 adds [explicit Operations + Staff integration V1](docs/production.md). Finalization remains commercial freeze + receivable only. A separate permission-gated, confirmed submission creates one canonical `b2b` production order, without changing prices or the current account. Progress is read-only and refreshed from Operations; commercial cancellation is blocked after any submission. Requires Operations API 2.11.0 / additive migration 012, Dashboard 0.5.4 permission labels, and Staff 2.3.2 manufacturing context. No automatic role grants, source writeback or production cancellation.
 
 Version 0.4.1 is a corrective release found in production acceptance: on phones (390 and 360 px) the payment form's allocation table widened the page; it now scrolls inside its own box. Frontend only; no API, migration or permission change.

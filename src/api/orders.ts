@@ -20,8 +20,13 @@ export type LineTotals = Totals & { baseNet: string; discountNet: string };
 export type Calculation = { currencyCode: Currency; lines: { totals: LineTotals | null }[]; totals: Totals | null; complete: boolean };
 export type OrderCapabilities = { canView: boolean; canCreate: boolean; canUpdate: boolean; canFinalize: boolean; canCancel: boolean };
 type Actor = { id: string; displayName: string };
+/** Frozen project location of one converted line (labels at conversion time). */
+export type LineOrigin = { zone: { name: string; level: number | null; zoneType: string }; room: { name: string }; opening: { name: string; width: string | null; height: string | null };
+  treatment: { treatmentType: string; panelLayout: string | null } };
+export type OrderOrigin = { projectId: string; projectCode: string; projectName: string; lines: Record<string, LineOrigin> };
 export type Order = OrderFields & {
   productionSubmitted?: boolean;
+  origin: OrderOrigin | null;
   id: string; code: string; status: CommercialStatus; version: number; sourceOrderId: string | null;
   companySnapshot: Record<string, unknown>; contactSnapshot: Record<string, unknown> | null;
   billingAddressSnapshot: Record<string, unknown> | null; deliveryAddressSnapshot: Record<string, unknown> | null;
@@ -81,6 +86,16 @@ function mapLine(v: unknown): LineInput {
 }
 const actor = (v: unknown): Actor => { const r = obj(v); return { id: str(r.id), displayName: str(r.displayName) }; };
 const snapshot = (v: unknown) => v === null ? null : obj(v);
+function mapOrigin(v: unknown): OrderOrigin | null {
+  if (v === null || v === undefined) return null;
+  const r = obj(v), lines = r.lines;
+  const entries = Array.isArray(lines) && lines.length === 0 ? [] : Object.entries(obj(lines));
+  return { projectId: str(r.projectId), projectCode: str(r.projectCode), projectName: str(r.projectName), lines: Object.fromEntries(entries.map(([id, x]) => {
+    const l = obj(x), z = obj(l.zone), o = obj(l.opening), t = obj(l.treatment);
+    return [id, { zone: { name: str(z.name), level: z.level === null ? null : typeof z.level === "number" ? z.level : fail(), zoneType: str(z.zoneType) }, room: { name: str(obj(l.room).name) },
+      opening: { name: str(o.name), width: nullable(o.width), height: nullable(o.height) }, treatment: { treatmentType: str(t.treatmentType), panelLayout: nullable(t.panelLayout) } }];
+  })) };
+}
 export function mapOrderDetail(v: unknown): OrderDetail {
   const d = obj(v), r = obj(d.order), lines = array(r.lines).map(mapLine), calculation = mapCalculation(r.calculation);
   if (lines.length !== calculation.lines.length || r.currencyCode !== calculation.currencyCode) fail();
@@ -89,7 +104,7 @@ export function mapOrderDetail(v: unknown): OrderDetail {
     billingAddressId: nullable(r.billingAddressId), deliveryAddressId: nullable(r.deliveryAddressId),
     customerReference: nullable(r.customerReference), notes: nullable(r.notes), productionNotes: nullable(r.productionNotes), lines,
     id: str(r.id), code: str(r.code), status: status(r.status), version: integer(r.version), sourceOrderId: nullable(r.sourceOrderId),
-    productionSubmitted: r.productionSubmitted === undefined ? false : bool(r.productionSubmitted),
+    productionSubmitted: r.productionSubmitted === undefined ? false : bool(r.productionSubmitted), origin: mapOrigin(r.origin),
     companySnapshot: obj(r.companySnapshot), contactSnapshot: snapshot(r.contactSnapshot),
     billingAddressSnapshot: snapshot(r.billingAddressSnapshot), deliveryAddressSnapshot: snapshot(r.deliveryAddressSnapshot),
     createdAt: str(r.createdAt), updatedAt: str(r.updatedAt), finalizedAt: nullable(r.finalizedAt), cancelledAt: nullable(r.cancelledAt),

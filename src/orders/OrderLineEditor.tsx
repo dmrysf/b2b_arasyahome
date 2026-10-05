@@ -1,5 +1,5 @@
 import { memo } from "react";
-import type { LineTotals } from "../api/orders";
+import type { LineOrigin, LineTotals } from "../api/orders";
 import { useI18n } from "../i18n/context";
 import type { LineDraft } from "./model";
 
@@ -9,8 +9,8 @@ export function FieldError({ reason }: { reason?: string }) {
 }
 
 /** A row rerenders only for its own inputs, error state, position or authoritative preview. */
-export const OrderLineEditor = memo(function OrderLineEditor({ line, index, count, editable, fields, totals, currency, onChange, onAction }: {
-  line: LineDraft; index: number; count: number; editable: boolean; fields: Record<string, string>; totals: LineTotals | null; currency: string;
+export const OrderLineEditor = memo(function OrderLineEditor({ line, index, count, editable, fields, totals, currency, onChange, onAction, origin = null }: {
+  line: LineDraft; index: number; count: number; editable: boolean; fields: Record<string, string>; totals: LineTotals | null; currency: string; origin?: LineOrigin | null;
   onChange: (uuid: string, field: keyof LineDraft, value: string) => void;
   onAction: (uuid: string, action: "duplicate" | "remove" | "up" | "down") => void;
 }) {
@@ -27,6 +27,7 @@ export const OrderLineEditor = memo(function OrderLineEditor({ line, index, coun
   return <article className="order-line" data-line-id={line.id}>
     <div className="order-line-header"><span className="line-position">{String(index + 1).padStart(2, "0")}</span>
       <strong>{line.productCode || o.productCode}</strong>
+      {origin && <span className="line-origin" data-testid="line-origin">{[origin.zone.name, origin.room.name, origin.opening.name].join(" · ")}</span>}
       {editable && <div className="row-actions">
         <button type="button" className="button button-ghost" disabled={index === 0} onClick={() => onAction(line.id, "up")} aria-label={`${o.moveUp} ${index + 1}`}>↑</button>
         <button type="button" className="button button-ghost" disabled={index === count - 1} onClick={() => onAction(line.id, "down")} aria-label={`${o.moveDown} ${index + 1}`}>↓</button>

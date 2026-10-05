@@ -16,6 +16,10 @@ import { OrdersPage } from "./orders/OrdersPage";
 import { OrderPage } from "./orders/OrderPage";
 import { AccountsPage, CompanyAccountPage } from "./accounts/AccountsPage";
 import { accountsRoute } from "./accounts/model";
+import { projectsRoute } from "./projects/model";
+import { ProjectsPage } from "./projects/ProjectsPage";
+import { ProjectCreatePage } from "./projects/ProjectCreatePage";
+import { ProjectWorkspace } from "./projects/ProjectWorkspace";
 
 /** The authorization re-check interval while B2B is open; authorization is never cached beyond it. */
 export const ACCESS_RECHECK_MS = 60_000;
@@ -107,6 +111,8 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   const route = companiesRoute(pathname);
   const orderRoute = ordersRoute(pathname);
   const accountRoute = accountsRoute(pathname);
+  const projectRoute = projectsRoute(pathname);
+  const projectCaps = { canView: permissions.includes("b2b.projects.view"), canCreate: permissions.includes("b2b.projects.create") };
   const canViewAccounts = permissions.includes("b2b.accounts.view");
   const orderCaps = {
     canView: permissions.includes("b2b.orders.view"), canCreate: permissions.includes("b2b.orders.create"),
@@ -128,6 +134,11 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   else if (orderRoute?.kind === "detail") page = orderCaps.canView
     ? <OrderPage key={orderRoute.id} api={api} id={orderRoute.id} capabilities={orderCaps} productionCapabilities={productionCaps} canCompanyView={canView} navigate={go} onDirty={onDirty} />
     : <OrdersPage api={api} canView={false} canCreate={orderCaps.canCreate && canView} navigate={go} />;
+  else if (projectRoute?.kind === "list") page = <ProjectsPage api={api} canView={projectCaps.canView} canCreate={projectCaps.canCreate && canView} navigate={go} />;
+  else if (projectRoute?.kind === "create") page = <ProjectCreatePage api={api} canCreate={projectCaps.canCreate} canCompanyView={canView} companyId={selectedCompany} navigate={go} />;
+  else if (projectRoute?.kind === "detail") page = projectCaps.canView
+    ? <ProjectWorkspace key={projectRoute.id} api={api} id={projectRoute.id} roomId={projectRoute.roomId} navigate={go} onDirty={onDirty} />
+    : <ProjectsPage api={api} canView={false} canCreate={false} navigate={go} />;
   else if (accountRoute?.kind === "list") page = <AccountsPage api={api} canView={canViewAccounts} navigate={go} />;
   else if (accountRoute?.kind === "company") page = canViewAccounts
     ? <CompanyAccountPage key={accountRoute.id} api={api} companyId={accountRoute.id} canViewCompany={canView} navigate={go} />

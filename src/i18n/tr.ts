@@ -1,6 +1,7 @@
 import { ordersTr } from '../orders/messages';
 import { accountsTr } from '../accounts/messages';
 import { productionTr } from '../production/messages';
+import { projectsTr } from '../projects/messages';
 import type { Messages } from "./ro";
 
 /** Turkish interface text. It must match the Romanian shape exactly; Romanian stays the fallback. */
@@ -8,6 +9,7 @@ export const tr: Messages = {
   orders: ordersTr,
   accounts: accountsTr,
   production: productionTr,
+  projects: projectsTr,
   locale: { short: "TR", name: "Türkçe", switcher: "Arayüz dili" },
   brand: { name: "Arasya B2B", product: "Toptan Satış Yönetimi", title: "Arasya B2B", notConfigured: "B2B uygulaması yapılandırılmamış." },
   common: {
@@ -59,7 +61,7 @@ export const tr: Messages = {
   home: {
     greeting: (name: string) => `Hoş geldiniz, ${name}.`,
     foundationTitle: "Şirket içi toptan satış uygulaması",
-    foundationBody: "Giriş, erişim ve arayüz dilleri merkezi Arasya hesabı üzerinden çalışır. Şirketler, Siparişler (hızlı toptan sipariş girişi) ve Cari hesaplar modülleri kullanılabilir; diğer modüller adım adım eklenecektir.",
+    foundationBody: "Giriş, erişim ve arayüz dilleri merkezi Arasya hesabı üzerinden çalışır. Şirketler, Siparişler (hızlı toptan giriş), Projeler (odalar, pencereler, PDF teklif) ve Cari hesaplar kullanılabilir.",
     accountTitle: "Hesabınız",
     accountName: "Ad",
     accountUsername: "Kullanıcı",
@@ -231,6 +233,16 @@ export const tr: Messages = {
   },
   errors: {
     ORDER_NOT_FOUND: "Sipariş bulunamadı.",
+    PROJECT_NOT_FOUND: "Proje bulunamadı.",
+    PROJECT_NODE_NOT_FOUND: "Oda artık projede yok.",
+    PROJECT_CHANGED: "Proje bu arada değiştirildi. Girdiğiniz bilgiler korunuyor.",
+    PROJECT_NOT_EDITABLE: "Proje arşivlendi ve artık düzenlenemez.",
+    PROJECT_STATUS_UNCHANGED: "Proje zaten bu durumda.",
+    PROJECT_LIMIT_EXCEEDED: "Proje bu işlem için boyut sınırına ulaştı.",
+    INVALID_PROJECT_SCOPE: "Bu projeden 1 ile 100 arasında ürün seçin.",
+    ORDER_ALREADY_CREATED_FROM_SCOPE: "Bazı ürünler zaten bir siparişte. Yenileyip başka ürünler seçin.",
+    UNSUPPORTED_TREATMENT: "Bu uygulama türü desteklenmiyor.",
+    PRODUCTION_NOT_SUBMITTED: "Sipariş henüz üretime gönderilmedi.",
     ORDER_CHANGED: "Sipariş başka biri tarafından değiştirildi. Girdiğiniz bilgiler korunuyor.",
     ORDER_FINALIZED: "Sipariş zaten kesinleştirildi.",
     CURRENCY_CHANGE_REQUIRES_EMPTY_PRICING: "Para birimini değiştirmeden önce fiyatları temizleyip taslağı kaydedin.",

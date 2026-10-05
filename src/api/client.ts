@@ -9,6 +9,10 @@ import {
 } from "./accounts";
 import { ApiError } from "./errors";
 import { PRODUCTION_PERMISSIONS, mapProduction } from './production';
+import {
+  PROJECT_PERMISSIONS, mapChangeResult, mapCommercial, mapProjectActivity, mapProjectDetail, mapProjectList, mapProjectMutation, mapProjectOrders, mapRoomDetail, mapScene,
+  type ProjectFields, type ProjectOperation, type ProjectStatus,
+} from './projects';
 import type { B2bAccess, Session, SessionEmployee } from "./types";
 
 export { ApiError } from "./errors";
@@ -58,7 +62,7 @@ function mapAccess(value: unknown): B2bAccess {
   }
   // Only known module permissions are kept; an older API without the field means "none".
   const permissions = Array.isArray(raw.permissions)
-    ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS, ...ACCOUNT_PERMISSIONS, ...PRODUCTION_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
+    ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS, ...ACCOUNT_PERMISSIONS, ...PRODUCTION_PERMISSIONS, ...PROJECT_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
     : [];
   return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions };
 }
@@ -178,6 +182,36 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     getOrder: async (id: string) => mapOrderDetail(await request(`/b2b/orders/${segment(id)}`)),
     getProduction: async (id: string) => mapProduction(await request(`/b2b/orders/${segment(id)}/production`)),
     submitProduction: async (id: string, expectedVersion: number, { idempotencyKey }: Idempotent) => mapProduction(await request(`/b2b/orders/${segment(id)}/production`, { method: 'POST', body: { expectedVersion }, idempotencyKey })),
+    /** The workshop sheet rendered by the server from the immutable manufacturing snapshot (no money). */
+    productionSheetFile: (id: string, lang: "ro" | "tr") => requestFile(`/b2b/orders/${segment(id)}/production-sheet.pdf?lang=${lang}`),
+
+    listProjects: async (query: { search?: string; status?: "open" | ProjectStatus | "all"; companyId?: string; cursor?: string | null } = {}) => {
+      const params = new URLSearchParams();
+      if (query.search?.trim()) params.set("search", query.search.trim());
+      if (query.status) params.set("status", query.status);
+      if (query.companyId) params.set("companyId", query.companyId);
+      if (query.cursor) params.set("cursor", query.cursor);
+      return mapProjectList(await request(`/b2b/projects${params.size ? `?${params}` : ""}`));
+    },
+    getProject: async (id: string) => mapProjectDetail(await request(`/b2b/projects/${segment(id)}`)),
+    getProjectRoom: async (id: string, roomId: string) => mapRoomDetail(await request(`/b2b/projects/${segment(id)}/rooms/${segment(roomId)}`)),
+    getProjectScene: async (id: string, roomId: string) => mapScene(await request(`/b2b/projects/${segment(id)}/scene?roomId=${segment(roomId)}`)),
+    getProjectCommercial: async (id: string) => mapCommercial(await request(`/b2b/projects/${segment(id)}/commercial`)),
+    getProjectOrders: async (id: string) => mapProjectOrders(await request(`/b2b/projects/${segment(id)}/orders`)),
+    projectActivity: async (id: string, cursor?: string | null) => mapProjectActivity(await request(`/b2b/projects/${segment(id)}/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`)),
+    createProject: async (fields: ProjectFields, { idempotencyKey }: Idempotent) => mapProjectMutation(await request("/b2b/projects", { method: "POST", body: fields, idempotencyKey })),
+    updateProject: async (id: string, fields: ProjectFields, expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapProjectMutation(await request(`/b2b/projects/${segment(id)}`, { method: "PUT", body: { ...fields, expectedVersion }, idempotencyKey })),
+    setProjectStatus: async (id: string, status: "active" | "archived", expectedVersion: number, { idempotencyKey }: Idempotent) =>
+      mapProjectMutation(await request(`/b2b/projects/${segment(id)}/status`, { method: "POST", body: { status, expectedVersion }, idempotencyKey })),
+    changeProject: async (id: string, operations: ProjectOperation[], { idempotencyKey }: Idempotent) =>
+      mapChangeResult(await request(`/b2b/projects/${segment(id)}/changes`, { method: "POST", body: { operations }, idempotencyKey })),
+    convertProject: async (id: string, treatmentIds: string[], expectedRevision: number, { idempotencyKey }: Idempotent) => {
+      const r = await request<{ orderId?: unknown }>(`/b2b/projects/${segment(id)}/orders`, { method: "POST", body: { treatmentIds, expectedRevision }, idempotencyKey });
+      if (typeof r.orderId !== "string") throw new ApiError("INVALID_RESPONSE", 502);
+      return r.orderId;
+    },
+    proposalFile: (id: string, lang: "ro" | "tr") => requestFile(`/b2b/projects/${segment(id)}/proposal.pdf?lang=${lang}`),
     calculateOrder: async (fields: { currencyCode: Currency; lines: LineInput[] }) => mapCalculation(await request('/b2b/orders/calculate', {method:'POST',body:fields})),
     createOrder: async (fields: OrderFields, {idempotencyKey}: Idempotent) => mapOrderMutation(await request('/b2b/orders',{method:'POST',body:fields,idempotencyKey})),
     updateOrder: async (id: string, fields: OrderFields, expectedVersion: number, {idempotencyKey}: Idempotent) => mapOrderMutation(await request(`/b2b/orders/${segment(id)}`,{method:'PUT',body:{...fields,expectedVersion},idempotencyKey})),
