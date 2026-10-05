@@ -344,6 +344,9 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
 .balance-settled .account-balance-value strong, .account-amount.balance-settled { color: var(--muted); }
 .account-actions { padding: 2px 0; }
 .account-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.allocation-editor { display: grid; gap: 8px; min-width: 0; }
+.account-form { min-width: 0; }
+.allocation-table { min-width: 520px; }
 .account-fieldset { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; display: grid; gap: 10px; min-width: 0; margin: 0; }
 .account-fieldset legend { font-weight: 600; padding: 0 4px; }
 .account-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }

@@ -149,7 +149,8 @@ function AllocationEditor({ items, rows, setRows, limit }: { items: OpenItem[]; 
   if (items.length === 0) return <p className="muted">{a.noOpenReceivables}</p>;
   return (
     <div className="allocation-editor">
-      <table className="account-table">
+      <div className="table-scroll">
+      <table className="account-table allocation-table">
         <thead><tr><th>{a.document}</th><th>{a.valueDate}</th><th className="num">{a.open}</th><th className="num">{a.amount}</th><th /></tr></thead>
         <tbody>
           {items.map((item) => {
@@ -174,6 +175,7 @@ function AllocationEditor({ items, rows, setRows, limit }: { items: OpenItem[]; 
           })}
         </tbody>
       </table>
+      </div>
       {limit && <p className="meta" role="status">{a.allocatedTotal(formatMoney(fromCents(chosen.cents), locale), formatMoney(fromCents(toCents(limit) - chosen.cents), locale))}</p>}
     </div>
   );

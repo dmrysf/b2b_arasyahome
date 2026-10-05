@@ -134,6 +134,14 @@ test("current account: receivables from finalized orders, payment with allocatio
   await page.getByRole("region", { name: "Hesap ekstresi" }).getByRole("button", { name: "Göster" }).click();
   await expect(page.getByRole("region", { name: "Hesap ekstresi" }).locator("table")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  // The payment form with its allocation table must not widen the page either (found in production acceptance at 390/360).
+  for (const width of [390, 360]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.getByRole("button", { name: "Ödeme kaydet" }).click();
+    await expect(page.getByRole("form", { name: "Yeni ödeme" }).locator(".allocation-editor table")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+    await page.getByRole("form", { name: "Yeni ödeme" }).getByRole("button", { name: "Vazgeç" }).click();
+  }
 
   // Server truth: balance = ledger, and nothing reached production.
   const summary = await (await admin.get(`${API}/b2b/accounts/${companyId}`)).json();
