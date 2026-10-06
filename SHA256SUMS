@@ -4,7 +4,7 @@ fdc0d57e2d134f67a07f38e5b5d185c92a3ea0afae7647b63bb0f17bea6ac7a7  ./dist/assets/
 5fca25374817772b736c121ca7c456d52f668abce2f6f5b51a459409f6b2b982  ./dist/assets/index-D6QBn39r.js
 c20c724409d7e9997c32fa6980d9c2c65801fc971a59c619bc01b45ee6f8f0a9  ./dist/favicon.svg
 8b6394c4b7c8672ce4f7219a0b4057ba53bbbde97c5aec84eca53c5f26999bb8  ./dist/index.html
-a88cbefd78321d8b8c60a9bb7c885048ebc92f64884a889db0966014b1d73443  ./dist/release.json
+1f2ca2e1d4a1432315fe03c0e7cecaf4452be16aa0fd12841cb45e5df69256bf  ./dist/release.json
 331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1  ./dist/robots.txt
 24c3d8884cafcfd031306a752673721e0e300829ba9cd752c17ecd7288214870  ./scripts/b2b-release-common.sh
 6ac5df1eae42226ac04d8632d774cf81b3147e39c29f130f94a0c3dcad704c13  ./scripts/cpanel-deploy.sh
