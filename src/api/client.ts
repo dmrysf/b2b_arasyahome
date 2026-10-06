@@ -186,7 +186,7 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     submitProduction: async (id: string, expectedVersion: number, { idempotencyKey }: Idempotent) => mapProduction(await request(`/b2b/orders/${segment(id)}/production`, { method: 'POST', body: { expectedVersion }, idempotencyKey })),
     /** The workshop sheet rendered by the server from the immutable manufacturing snapshot (no money). */
     /** The canonical Arasya production ticket (Romanian), recorded centrally as a print or reprint. */
-    productionSheetFile: (id: string, idempotencyKey: string) => requestFile(`/b2b/orders/${segment(id)}/production-sheet.pdf`, { body: {}, idempotencyKey }),
+    productionSheetFile: (id: string, idempotencyKey: string) => requestFile(`/b2b/orders/${segment(id)}/production-sheet.pdf`, { body: { reason: null }, idempotencyKey }),
 
     listProjects: async (query: { search?: string; status?: "open" | ProjectStatus | "all"; companyId?: string; cursor?: string | null } = {}) => {
       const params = new URLSearchParams();

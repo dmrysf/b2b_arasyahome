@@ -35,7 +35,7 @@ test('the workshop download is the canonical ticket: a POST with CSRF and one id
   assert.equal(call.method, 'POST');
   assert.equal(call.headers['Idempotency-Key'], 'print-key-0123456789');
   assert.ok(call.headers['X-CSRF-Token']);
-  assert.deepEqual(call.body, {});
+  assert.deepEqual(call.body, { reason: null });
   assert.equal(call.url.search, '');
 });
 test('the API has only one read and one explicit authenticated production mutation', async () => {
