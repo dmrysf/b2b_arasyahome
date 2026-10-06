@@ -44,7 +44,12 @@ export function ProjectWorkspace({ api, id, roomId, navigate, onDirty }: {
   const roomTotal = ws.commercial?.zones.flatMap(z => z.rooms).find(r => r.id === currentRoom?.id);
   const download = async () => {
     setBusy("pdf"); setActionError(null);
-    try { await ws.flush(); saveFile(await api.proposalFile(id, locale), `oferta-${project.code}-rev${ws.detail?.project.revision ?? project.revision}.pdf`); }
+    try {
+      await ws.flush();
+      const [file, current] = await Promise.all([api.proposalFile(id, locale), api.getProject(id)]);
+      saveFile(file, `oferta-${project.code}-rev${current.project.revision}.pdf`);
+      ws.setDetail(current);
+    }
     catch (e) { setActionError(e); } finally { setBusy(null); }
   };
   const addZone = () => {
@@ -53,7 +58,8 @@ export function ProjectWorkspace({ api, id, roomId, navigate, onDirty }: {
   };
   const addRoom = (zone: Zone) => {
     const room = uuid(), last = zone.rooms[zone.rooms.length - 1];
-    const name = last ? copyNames(last.name, 1)[0] : `${p.roomLabel}${zone.level !== null && zone.level >= 0 ? zone.level * 100 + 1 : 1}`;
+    const taken = zones.flatMap(z => z.rooms.map(r => r.name));
+    const name = last ? copyNames(last.name, 1, undefined, 1, taken)[0] : copyNames(`${p.roomLabel}${zone.level !== null && zone.level >= 0 ? zone.level * 100 : 0}`, 1, undefined, 1, taken)[0];
     void run("room", [{ op: "room.create", id: room, zoneId: zone.id, fields: fromForm("room", emptyForm("room", name)) }]).then(ok => { if (ok) select(room); });
   };
   return <div className="page page-wide project-workspace-page" ref={root}>
@@ -201,7 +207,7 @@ function RoomEditor({ api, projectId, ws, editable, busy, run, onDialog, onRemov
     const ok = await run("remove", [{ op: `${level}.remove`, id: nodeId, expectedVersion: ws.version(nodeId) } as ProjectOperation]);
     if (ok && level === "room") onRemoved();
   };
-  const addOpening = () => void run("opening", [{ op: "opening.create", id: uuid(), roomId: room.id, fields: fromForm("opening", emptyForm("opening", `${p.windowLabel} ${room.openings.length + 1}`)) }]);
+  const addOpening = () => void run("opening", [{ op: "opening.create", id: uuid(), roomId: room.id, fields: fromForm("opening", emptyForm("opening", copyNames(`${p.windowLabel} 0`, 1, undefined, 1, room.openings.map(o => ws.forms[o.id]?.name || o.name))[0])) }]);
   const I = (field: string, label: string, numeric = false, wide = false) => <Input ws={ws} id={room.id} field={field} label={label} numeric={numeric} editable={editable} wide={wide} />;
   return <div className="room-editor">
     <section className="card room-card">
@@ -315,7 +321,9 @@ function RepeatDialog({ kind, sourceId, ws, zones, onClose, onApply }: {
   const [count, setCount] = useState("19"), [first, setFirst] = useState(""), [zoneId, setZoneId] = useState(room.zoneId);
   const [targets, setTargets] = useState<string[]>([]), [mode, setMode] = useState<"replace" | "append">("replace"), [busy, setBusy] = useState(false);
   const n = Math.max(1, Math.min(200, Number(count) || 1));
-  const names = useMemo(() => copyNames(source.name, n, first.trim() === "" ? undefined : Number(first)), [source.name, n, first]);
+  const taken = useMemo(() => kind === "repeatOpening" ? room.openings.map(o => ws.forms[o.id]?.name || o.name)
+    : zones.flatMap(z => z.rooms.map(r => ws.forms[r.id]?.name || r.name)), [kind, room.openings, zones, ws.forms]);
+  const names = useMemo(() => copyNames(source.name, n, first.trim() === "" ? undefined : Number(first), 1, taken), [source.name, n, first, taken]);
   const title = { duplicateRoom: p.duplicateRoomTitle, applyRoom: p.applyRoomTitle, repeatOpening: p.repeatOpeningTitle, copySet: p.copySetTitle }[kind](source.name);
   const candidates = kind === "applyRoom" ? zones.flatMap(z => z.rooms.filter(r => r.id !== room.id).map(r => ({ id: r.id, label: `${z.name} · ${r.name}` })))
     : kind === "copySet" ? room.openings.filter(o => o.id !== sourceId).map(o => ({ id: o.id, label: o.name })) : [];

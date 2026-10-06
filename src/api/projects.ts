@@ -76,8 +76,8 @@ function choice<T extends string>(v: unknown, choices: readonly T[]): T { return
 const dec = (v: unknown, scale: number): string | null => v === null ? null : new RegExp(`^\\d+\\.\\d{${scale}}$`).test(str(v)) ? v as string : fail();
 const money = (v: unknown) => dec(v, 2) ?? fail();
 const actor = (v: unknown): Actor => { const r = obj(v); return { id: str(r.id), displayName: str(r.displayName) }; };
-/** Empty JSON maps may arrive as [] (PHP); both mean "no entries". */
-const map = (v: unknown): Record<string, unknown> => Array.isArray(v) && v.length === 0 ? {} : obj(v);
+/** PHP encodes an empty or index-keyed map as a JSON list; both forms mean the same entries by index. */
+const map = (v: unknown): Record<string, unknown> => Array.isArray(v) ? Object.fromEntries(v.map((x, i) => [String(i), x])) : obj(v);
 function totals(v: unknown): Totals | null { if (v === null) return null; const r = obj(v); return { net: money(r.net), vat: money(r.vat), gross: money(r.gross) }; }
 function lineTotals(v: unknown): LineTotals | null {
   if (v === null || v === undefined) return null;

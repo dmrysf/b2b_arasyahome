@@ -81,12 +81,18 @@ export const AUTOSAVE_DELAY_MS = 1_500;
  * Names for N copies: "Camera 101" -> "Camera 102", "Camera 103"…; a name without a trailing number gets " 2", " 3"…
  * Zero padding is kept ("A-01" -> "A-02"). The employee can always edit the proposal before applying it.
  */
-export function copyNames(source: string, count: number, start?: number, step = 1): string[] {
+export function copyNames(source: string, count: number, start?: number, step = 1, taken: Iterable<string> = []): string[] {
   const match = /^(.*?)(\d+)\s*$/.exec(source.trim());
   const prefix = match ? match[1] : `${source.trim()} `;
   const width = match ? match[2].length : 1;
-  const first = start ?? (match ? Number(match[2]) + step : 2);
-  return Array.from({ length: Math.max(0, Math.min(count, 200)) }, (_, i) => `${prefix}${String(first + i * step).padStart(width, "0")}`);
+  const used = new Set([...taken].map(name => name.trim().toLocaleLowerCase()));
+  const out: string[] = [];
+  // Names already used next to the copies are skipped, so no two windows of a room (or rooms of a project) share a label.
+  for (let n = start ?? (match ? Number(match[2]) + step : 2), guard = 0; out.length < Math.max(0, Math.min(count, 200)) && guard < 10_000; n += step, guard++) {
+    const name = `${prefix}${String(n).padStart(width, "0")}`;
+    if (!used.has(name.toLocaleLowerCase())) { out.push(name); used.add(name.toLocaleLowerCase()); }
+  }
+  return out;
 }
 
 /** Hotel-style scaffold: floors x rooms with "101, 102…" numbering and identical windows. */

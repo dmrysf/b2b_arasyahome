@@ -35,6 +35,8 @@ test("repetition names: hotel numbering, padding, explicit start, bounded count"
   assert.deepEqual(copyNames("Living", 2), ["Living 2", "Living 3"]);
   assert.deepEqual(copyNames("Camera 101", 2, 201), ["Camera 201", "Camera 202"]);
   assert.equal(copyNames("X 1", 999).length, 200);
+  assert.deepEqual(copyNames("Fereastra 1", 4, undefined, 1, ["Fereastra 1", "Fereastra 2"]), ["Fereastra 3", "Fereastra 4", "Fereastra 5", "Fereastra 6"], "never reuses a name already in the room");
+  assert.deepEqual(copyNames("Camera 101", 2, 104, 1, ["camera 105"]), ["Camera 104", "Camera 106"]);
 });
 
 test("scaffold builds floors, numbered rooms and empty windows in request-sized batches", () => {
@@ -57,6 +59,7 @@ test("autosave retries back off without a request storm", () => {
 test("project responses are mapped strictly; empty PHP maps are accepted; renderer data has no engine state", () => {
   assert.deepEqual(mapChangeResult({ projectId: "p", revision: 2, versions: [], created: [] }), { projectId: "p", revision: 2, versions: {}, created: {} });
   assert.deepEqual(mapChangeResult({ projectId: "p", revision: 3, versions: { a: 2 }, created: { 0: ["b"] } }).created, { 0: ["b"] });
+  assert.deepEqual(mapChangeResult({ projectId: "p", revision: 3, versions: { a: 2 }, created: [["b"]] }).created, { 0: ["b"] }, "an older replay shape still maps");
   assert.throws(() => mapChangeResult({ projectId: "p", revision: 3, versions: { a: "2" }, created: {} }), ApiError);
   assert.throws(() => mapScene({ schema: "three.js", unit: "cm", projectId: "p", revision: 1, rooms: [] }), ApiError);
   const scene = mapScene({ schema: "arasya.scene/1", unit: "cm", projectId: "p", revision: 1, rooms: [{ id: "r", name: "Camera", dimensions: { width: 420, length: null, ceilingHeight: 280 },
