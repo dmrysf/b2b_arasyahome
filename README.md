@@ -1,5 +1,8 @@
 # Arasya B2B
 
+Version 0.6.2 aligns the read-only Turkish cutting-stage label (Kesim) with API 2.14.0.
+Commerce, account ledger, handoff and project behavior are unchanged.
+
 Wholesale sales management for Arasya (`https://b2b.arasyahome.ro`). Romanian: **Management vânzări en-gros**; Turkish: **Toptan Satış Yönetimi**.
 
 Arasya B2B is an internal application for Arasya employees who manage wholesale customers. It is not a customer portal.

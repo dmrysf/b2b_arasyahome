@@ -63,7 +63,7 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   const mutate = async (context: APIRequestContext, action: string, version: number) => context.post(`${API}/orders/${encodeURIComponent(global)}/${action}`, { headers: { Origin: fixture.origins.admin, 'X-CSRF-Token': operatorCsrf, 'Idempotency-Key': crypto.randomUUID() }, data: { expectedVersion: version } });
   expect((await mutate(operator,'claim',1)).status()).toBe(200); expect((await mutate(operator,'transition',2)).status()).toBe(200);
   await card.getByRole('button', { name: 'Actualizează producția' }).click(); await expect(card).toContainText('Etapa 2 din 14');
-  await expect(card).toContainText('Pregătire material'); await page.reload(); await expect(page.locator('.production-card')).toContainText('Etapa 2 din 14');
+  await expect(card).toContainText('Tăiere'); await page.reload(); await expect(page.locator('.production-card')).toContainText('Etapa 2 din 14');
   for (const width of [1440,768,390,360]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -71,7 +71,7 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   }
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'TR — Türkçe', exact: true }).click();
-  await expect(page.locator('.production-card')).toContainText('Malzeme Hazırlığı'); await expect(page.locator('.production-card')).toContainText('Aşama 2 / 14');
+  await expect(page.locator('.production-card')).toContainText('Kesim'); await expect(page.locator('.production-card')).toContainText('Aşama 2 / 14');
   await expect(page.locator('.production-card')).toContainText('İptal engellendi');
   await page.screenshot({ path: test.info().outputPath('production-tr-360-reduced-motion.png'), fullPage: true });
   await expect(page.locator('.production-card select, .production-card input')).toHaveCount(0);

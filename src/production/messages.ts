@@ -22,7 +22,7 @@ export const productionTr: typeof productionRo = {
 };
 /** API-owned stage IDs; one Turkish presentation dictionary, never a copied workflow state. */
 export const stagesTr: Record<StageId, string> = {
-  waiting: 'Bekliyor', 'material-preparation': 'Malzeme Hazırlığı', 'workshop-receiving': 'Atölye Kabul', labeling: 'Etiketleme',
+  waiting: 'Bekliyor', 'material-preparation': 'Kesim', 'workshop-receiving': 'Atölye Kabul', labeling: 'Etiketleme',
   'material-straightening': 'Kumaş Düzeltme', 'bottom-hem': 'Alt Kenar Dikişi', 'side-hem': 'Yan Kenar Dikişi', ironing: 'Ütüleme',
   height: 'Boy Ayarı', 'header-tape': 'Perde Bandı', 'sewing-finishing': 'Dikiş Tamamlama', 'quality-control': 'Kalite Kontrol', packing: 'Paketleme', delivery: 'Teslimat',
 };
