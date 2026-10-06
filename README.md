@@ -1,5 +1,7 @@
 # Arasya B2B
 
+Version 0.7.0 prints the canonical Arasya production ticket (Operations API 2.16.0): the B2B handoff generates revision 1, the workshop download is recorded centrally as a print or reprint of the active revision with the same QR, and a stale or revoked document cannot be printed. The commercial proposal PDF is unchanged.
+
 Version 0.6.2 aligns the read-only Turkish cutting-stage label (Kesim) with API 2.14.0.
 Commerce, account ledger, handoff and project behavior are unchanged.
 

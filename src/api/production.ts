@@ -9,6 +9,8 @@ export type Production = { submitted: false; orderCode: string } | {
   submitted: true; orderCode: string; operationalOrderId: string; submittedAt: string; stageChangedAt: string;
   completedAt: string | null; workflow: 'curtain-production@1'; totalStages: 14;
   stage: { id: StageId; label: string; ordinal: number };
+  /** Central production document: revision and whether it is usable (none before the first print). */
+  document: { status: 'none' | 'active' | 'stale' | 'revoked'; revisionNumber: number | null } | null;
 };
 export function mapProduction(value: unknown): Production {
   const fail = (): never => { throw new ApiError('INVALID_RESPONSE', 502); };
@@ -24,5 +26,12 @@ export function mapProduction(value: unknown): Production {
   if (!/^b2b:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(operationalOrderId)) fail();
   return { submitted: true, orderCode, operationalOrderId, submittedAt: date(r.submittedAt), stageChangedAt: date(r.stageChangedAt),
     completedAt: r.completedAt === null ? null : date(r.completedAt), workflow: 'curtain-production@1', totalStages: 14,
-    stage: { id: STAGES[index], label: text(stage.label), ordinal: index + 1 } };
+    stage: { id: STAGES[index], label: text(stage.label), ordinal: index + 1 }, document: mapDocument(r.document) };
+}
+function mapDocument(value: unknown): { status: 'none' | 'active' | 'stale' | 'revoked'; revisionNumber: number | null } | null {
+  if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (!['none', 'active', 'stale', 'revoked'].includes(raw.status as string)) return null;
+  const revision = typeof raw.revisionNumber === 'number' && Number.isInteger(raw.revisionNumber) && raw.revisionNumber > 0 ? raw.revisionNumber : null;
+  return { status: raw.status as 'none' | 'active' | 'stale' | 'revoked', revisionNumber: revision };
 }

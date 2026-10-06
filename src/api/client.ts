@@ -122,10 +122,12 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
   }
 
   /** A file download (statement CSV/PDF). Errors are read like any other request; the body is never parsed as JSON on success. */
-  async function requestFile(path: string): Promise<Blob> {
+  async function requestFile(path: string, post?: { body: unknown; idempotencyKey: string }): Promise<Blob> {
     let response: Response;
     try {
-      response = await fetchImpl(new URL(path, baseUrl).toString(), { method: "GET", headers: { Accept: "text/csv, application/pdf, application/json" }, credentials: "include", cache: "no-store" });
+      const headers: Record<string, string> = { Accept: "text/csv, application/pdf, application/json" };
+      if (post) Object.assign(headers, { "Content-Type": "application/json", "Idempotency-Key": post.idempotencyKey, ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}) });
+      response = await fetchImpl(new URL(path, baseUrl).toString(), { method: post ? "POST" : "GET", headers, credentials: "include", cache: "no-store", body: post ? JSON.stringify(post.body) : undefined });
     } catch {
       throw new ApiError("NETWORK_UNAVAILABLE", 0);
     }
@@ -183,7 +185,8 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
     getProduction: async (id: string) => mapProduction(await request(`/b2b/orders/${segment(id)}/production`)),
     submitProduction: async (id: string, expectedVersion: number, { idempotencyKey }: Idempotent) => mapProduction(await request(`/b2b/orders/${segment(id)}/production`, { method: 'POST', body: { expectedVersion }, idempotencyKey })),
     /** The workshop sheet rendered by the server from the immutable manufacturing snapshot (no money). */
-    productionSheetFile: (id: string, lang: "ro" | "tr") => requestFile(`/b2b/orders/${segment(id)}/production-sheet.pdf?lang=${lang}`),
+    /** The canonical Arasya production ticket (Romanian), recorded centrally as a print or reprint. */
+    productionSheetFile: (id: string, idempotencyKey: string) => requestFile(`/b2b/orders/${segment(id)}/production-sheet.pdf`, { body: {}, idempotencyKey }),
 
     listProjects: async (query: { search?: string; status?: "open" | ProjectStatus | "all"; companyId?: string; cursor?: string | null } = {}) => {
       const params = new URLSearchParams();

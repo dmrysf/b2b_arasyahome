@@ -9,12 +9,12 @@ import { saveFile } from '../accounts/model';
 export function ProductionCard({ api, order, capabilities, disabled, onSubmitted }: {
   api: B2bApi; order: Order; capabilities: ProductionCapabilities; disabled: boolean; onSubmitted: () => void;
 }) {
-  const { t, stageLabel, problem, dateTime, locale } = useI18n(), p = t.production;
+  const { t, stageLabel, problem, dateTime } = useI18n(), p = t.production;
   const [sheetBusy, setSheetBusy] = useState(false);
   const [production, setProduction] = useState<Production | null>(null), [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false), [confirm, setConfirm] = useState(false);
   const [loading, setLoading] = useState(capabilities.canView);
-  const lock = useRef(false), generation = useRef(0), mounted = useRef(true), intent = useRef(new Intent());
+  const lock = useRef(false), generation = useRef(0), mounted = useRef(true), intent = useRef(new Intent()), sheetIntent = useRef(new Intent());
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const refresh = useCallback(async () => {
     if (!capabilities.canView || lock.current) return;
@@ -54,8 +54,15 @@ export function ProductionCard({ api, order, capabilities, disabled, onSubmitted
     finally { lock.current = false; if (mounted.current) setBusy(false); }
   }
   async function downloadSheet() {
+    if (sheetBusy) return;
     setSheetBusy(true); setError(null);
-    try { saveFile(await api.productionSheetFile(order.id, locale), `productie-${order.code}.pdf`); }
+    // One idempotency key per print intent: a retried request records no second print.
+    const key = sheetIntent.current.keyFor({ orderId: order.id, print: production?.submitted ? production.document?.revisionNumber ?? 0 : 0 });
+    try {
+      saveFile(await api.productionSheetFile(order.id, key), `ARASYA-${order.code}-R${production?.submitted && production.document?.revisionNumber ? production.document.revisionNumber : 1}.pdf`);
+      sheetIntent.current.done();
+      void refresh();
+    }
     catch (error) { if (mounted.current) setError(error); }
     finally { if (mounted.current) setSheetBusy(false); }
   }
@@ -77,7 +84,10 @@ export function ProductionCard({ api, order, capabilities, disabled, onSubmitted
         {production.completedAt && <div><dt>{p.finishedAt}</dt><dd>{dateTime(production.completedAt)}</dd></div>}
         <div><dt>{p.reference}</dt><dd>{production.operationalOrderId}</dd></div>
       </dl>
-      <button type="button" className="button button-secondary" disabled={sheetBusy} onClick={() => void downloadSheet()}>{sheetBusy ? t.projects.downloading : t.projects.productionSheet}</button>
+      {production.document && <p className={production.document.status === 'stale' || production.document.status === 'revoked' ? 'notice notice-error' : 'muted'} data-testid="production-document">
+        {p.document}: {production.document.revisionNumber ? `${p.revision(production.document.revisionNumber)} · ` : ''}{p.documentStates[production.document.status]}</p>}
+      <button type="button" className="button button-secondary" disabled={sheetBusy || production.document?.status === 'stale' || production.document?.status === 'revoked'} onClick={() => void downloadSheet()}>{sheetBusy ? t.projects.downloading : p.documentPdf}</button>
+      {production.document?.status === 'active' && <p className="muted">{p.documentHint}</p>}
     </>}
     <p className="muted">{submitted ? p.cancelBlocked : order.status === 'draft' ? p.draftHint : order.status === 'cancelled' ? p.cancelledHint : p.hint}</p>
     <p className="muted">{p.operator}</p>

@@ -12,7 +12,8 @@ import type { Order } from '../src/api/orders';
 const id = '00000000-0000-4000-8000-000000000001';
 const production = { submitted: true, orderCode: 'B2B-ORD-000001', operationalOrderId: `b2b:${id}`,
   submittedAt: '2026-10-05T00:00:00Z', stageChangedAt: '2026-10-05T00:00:00Z', completedAt: null,
-  workflow: 'curtain-production@1', totalStages: 14, stage: { id: 'waiting', label: 'În așteptare', ordinal: 1 } };
+  workflow: 'curtain-production@1', totalStages: 14, stage: { id: 'waiting', label: 'În așteptare', ordinal: 1 },
+  document: { status: 'active', revisionNumber: 1 } };
 test('production mapping fails closed on invalid stage identity, ordering, workflow and dates', () => {
   assert.deepEqual(mapProduction({ production }), production);
   assert.deepEqual(mapProduction({ production: { submitted: false, orderCode: production.orderCode } }), { submitted: false, orderCode: production.orderCode });
@@ -21,6 +22,21 @@ test('production mapping fails closed on invalid stage identity, ordering, workf
     assert.throws(() => mapProduction({ production: { ...production, ...delta } }), /INVALID_RESPONSE/);
   }
   assert.deepEqual(Object.keys(stagesTr), [...STAGES]);
+  // The central document state is optional (older API) and never invented.
+  const legacy = { ...production } as Record<string, unknown>; delete legacy.document;
+  assert.equal((mapProduction({ production: legacy }) as { document: unknown }).document, null);
+  assert.deepEqual((mapProduction({ production: { ...production, document: { status: 'stale', revisionNumber: 2, customer: 'x' } } }) as { document: unknown }).document, { status: 'stale', revisionNumber: 2 });
+});
+test('the workshop download is the canonical ticket: a POST with CSRF and one idempotency key per print', async () => {
+  const fake = fakeFetch(c => ({ body: c.url.pathname.endsWith('/production-sheet.pdf') ? '%PDF-1.4' : c.url.pathname === '/auth/session' ? sessionPayload() : accessPayload({ permissions: [...PRODUCTION_PERMISSIONS] }) }));
+  const api = createApi(API, fake.fetchImpl); await api.getSession();
+  await api.productionSheetFile(id, 'print-key-0123456789');
+  const call = fake.calls.find(c => c.url.pathname.endsWith('/production-sheet.pdf'))!;
+  assert.equal(call.method, 'POST');
+  assert.equal(call.headers['Idempotency-Key'], 'print-key-0123456789');
+  assert.ok(call.headers['X-CSRF-Token']);
+  assert.deepEqual(call.body, {});
+  assert.equal(call.url.search, '');
 });
 test('the API has only one read and one explicit authenticated production mutation', async () => {
   const fake = fakeFetch(c => ({ body: c.url.pathname === '/auth/session' ? sessionPayload() : c.url.pathname === '/b2b/access'

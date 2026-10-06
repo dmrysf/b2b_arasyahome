@@ -9,6 +9,10 @@ export const productionRo = {
   operator: 'Etapele sunt gestionate exclusiv de Staff.', refresh: 'Actualizează producția', sentAt: 'Trimisă la',
   changedAt: 'Etapă actualizată la', finishedAt: 'Finalizată la', reference: 'Referință operațională', cancelBlocked: 'Anularea este blocată: comanda a fost trimisă în producție.',
   progress: (current: number, total: number) => `Etapa ${current} din ${total}`,
+  document: 'Document de producție', documentPdf: 'Document de producție (PDF)',
+  documentStates: { none: 'Negenerat · se generează REVIZIA 1 la prima tipărire', active: 'Document activ', stale: 'Document blocat: datele de producție s-au schimbat', revoked: 'Document anulat' } as Record<string, string>,
+  revision: (n: number) => `REVIZIA ${n}`,
+  documentHint: 'Retipărirea păstrează aceeași revizie și același cod QR.',
 };
 export const productionTr: typeof productionRo = {
   title: 'Üretim', submit: 'Üretime gönder', question: 'Sipariş üretime gönderilsin mi?', confirm: 'Gönderimi onayla', cancel: 'Geri',
@@ -19,6 +23,10 @@ export const productionTr: typeof productionRo = {
   operator: 'Üretim aşamalarını yalnızca Staff yönetir.', refresh: 'Üretimi yenile', sentAt: 'Gönderim zamanı', changedAt: 'Aşama güncelleme zamanı',
   finishedAt: 'Tamamlanma zamanı', reference: 'Operasyon referansı', cancelBlocked: 'İptal engellendi: sipariş üretime gönderildi.',
   progress: (current, total) => `Aşama ${current} / ${total}`,
+  document: 'Üretim belgesi', documentPdf: 'Üretim belgesi (PDF)',
+  documentStates: { none: 'Oluşturulmadı · ilk yazdırmada REVİZYON 1 oluşturulur', active: 'Aktif belge', stale: 'Belge bloke: üretim verileri değişti', revoked: 'Belge iptal edildi' },
+  revision: (n) => `REVİZYON ${n}`,
+  documentHint: 'Yeniden yazdırma aynı revizyonu ve aynı QR kodunu korur.',
 };
 /** API-owned stage IDs; one Turkish presentation dictionary, never a copied workflow state. */
 export const stagesTr: Record<StageId, string> = {

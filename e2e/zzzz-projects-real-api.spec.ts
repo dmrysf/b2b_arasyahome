@@ -120,9 +120,14 @@ test("quick wholesale stays project-free; a field project is built, repeated, pr
   await page.locator(".production-card").getByRole("button", { name: "Trimite în producție", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: /Confirm/ }).click();
   await expect(page.locator(".production-card")).toContainText("Etapa 1 din 14");
-  const [sheet] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Fișă de producție (PDF)" }).click()]);
-  expect(sheet.suggestedFilename()).toMatch(/^productie-B2B-ORD-\d{6}\.pdf$/);
+  // The handoff generated REVIZIA 1 of the canonical ticket; the download prints it, a second download is a reprint.
+  await expect(page.getByTestId("production-document")).toContainText("REVIZIA 1 · Document activ");
+  const [sheet] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Document de producție (PDF)" }).click()]);
+  expect(sheet.suggestedFilename()).toMatch(/^ARASYA-B2B-ORD-\d{6}-R1\.pdf$/);
   expect(readFileSync(await sheet.path()).subarray(0, 8).toString()).toBe("%PDF-1.4");
+  const [reprint] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Document de producție (PDF)" }).click()]);
+  expect(readFileSync(await reprint.path()).equals(readFileSync(await sheet.path()))).toBe(true);
+  await expect(page.locator(".production-card")).toContainText("Retipărirea păstrează aceeași revizie și același cod QR.");
 
   // Project edits after finalization never touch the order.
   await page.goto(`/proiecte/${projectId}?camera=${room101}`);
