@@ -88,8 +88,29 @@ test("access denied is localized and reveals no permission internals", () => {
 });
 
 test("the forced password change screen is localized", () => {
-  assert.match(render("ro", <ChangePasswordPage displayName="Ion" onChange={async () => undefined} onLogout={() => undefined} />), /Schimbați parola.*Ion, contul folosește o parolă temporară/);
-  assert.match(render("tr", <ChangePasswordPage displayName="Ion" onChange={async () => undefined} onLogout={() => undefined} />), /Şifreyi değiştirin|Şifreyi değiştirin|Şifreyi|Şifre/);
+  const ro = render("ro", <ChangePasswordPage displayName="Ion" username="ion" onChange={async () => undefined} onLogout={() => undefined} />);
+  assert.match(ro, /Setați parola personală.*Ion, contul folosește o parolă temporară/);
+  assert.match(ro, /Pas obligatoriu Înainte de a accesa informațiile companiei/);
+  const markup = renderToStaticMarkup(<I18nProvider locale="ro"><ChangePasswordPage displayName="Ion" username="ion" onChange={async () => undefined} onLogout={() => undefined} /></I18nProvider>);
+  assert.match(markup, /role="note"/);
+  for (const name of ["Afișează parola curentă", "Afișează noua parolă", "Afișează confirmarea parolei"]) assert.match(markup, new RegExp(`aria-label="${name}"`));
+  assert.equal(markup.match(/class="password-toggle" aria-controls="[^"]+" aria-pressed="false"/g)?.length, 3);
+  const tr = render("tr", <ChangePasswordPage displayName="Ion" username="ion" onChange={async () => undefined} onLogout={() => undefined} />);
+  assert.match(tr, /Kişisel şifrenizi belirleyin.*Zorunlu adım/);
+  const voluntary = render("ro", <ChangePasswordPage voluntary displayName="Ion" username="ion" onChange={async () => undefined} onLogout={() => undefined} onCancel={() => undefined} />);
+  assert.match(voluntary, /Schimbați parola/);
+  assert.doesNotMatch(voluntary, /Pas obligatoriu/);
+  assert.match(voluntary, /Anulează/);
+});
+
+test("first-login checks run in Romanian before any request", async () => {
+  const { passwordProblem } = await import("../src/pages/AuthPages");
+  assert.equal(passwordProblem("Temp-2026-Password!", "o parolă personală lungă", "o parolă personală lungă", "nita.cristina"), null);
+  assert.equal(passwordProblem("Temp-2026-Password!", "", "", "nita.cristina"), "passwordMissing");
+  assert.equal(passwordProblem("Temp-2026-Password!", "scurtă", "scurtă", "nita.cristina"), "passwordTooShort");
+  assert.equal(passwordProblem("Temp-2026-Password!", "Temp-2026-Password!", "Temp-2026-Password!", "nita.cristina"), "passwordSame");
+  assert.equal(passwordProblem("Temp-2026-Password!", "NITA.cristina.2026!", "NITA.cristina.2026!", "nita.cristina"), "passwordContainsUsername");
+  assert.equal(passwordProblem("Temp-2026-Password!", "o parolă personală lungă", "alta", "nita.cristina"), "passwordMismatch");
 });
 
 test("server text is never shown; failures use localized codes", () => {

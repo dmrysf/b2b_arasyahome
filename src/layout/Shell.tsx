@@ -8,7 +8,7 @@ import { PLANNED_MODULES } from "./modules";
 import { ACCOUNTS_PATH } from "../accounts/model";
 import { PROJECTS_PATH } from "../projects/model";
 
-export function Shell({ access, pathname, navigate, onLogout, children }: { access: B2bAccess; pathname: string; navigate: (path: string) => void; onLogout: () => void; children: ReactNode }) {
+export function Shell({ access, pathname, navigate, onLogout, onChangePassword, passwordChanged = false, children }: { access: B2bAccess; pathname: string; navigate: (path: string) => void; onLogout: () => void; onChangePassword?: () => void; passwordChanged?: boolean; children: ReactNode }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const inCompanies = pathname === COMPANIES_PATH || pathname.startsWith(`${COMPANIES_PATH}/`);
@@ -43,6 +43,8 @@ export function Shell({ access, pathname, navigate, onLogout, children }: { acce
             <strong>{access.employee.displayName}</strong>
             <span>{access.employee.username}</span>
           </div>
+          {passwordChanged && <p className="password-changed" role="status">{t.auth.passwordChanged}</p>}
+          {onChangePassword && <button type="button" className="button button-ghost button-block" onClick={onChangePassword}>{t.auth.changePassword}</button>}
           <button type="button" className="button button-ghost button-block" onClick={onLogout}>{t.common.logout}</button>
           <span className="version">{t.common.version(B2B_VERSION)}</span>
         </div>

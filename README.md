@@ -1,5 +1,7 @@
 # Arasya B2B
 
+Version 0.8.0 makes the first login explicit: the forced change is titled *Setați parola personală* and states that a personal password is required before any company information; every password field has its own Show/Hide control with a distinct accessible name and `aria-pressed`; Romanian and Turkish checks run before the request (all fields, 12 characters, different from the current password, no username, matching confirmation) while the Operations API stays the authority; *Schimbați parola* in the account area offers a voluntary change of the one central password. Works with Operations API 2.22 and later.
+
 Version 0.7.0 prints the canonical Arasya production ticket (Operations API 2.16.0): the B2B handoff generates revision 1, the workshop download is recorded centrally as a print or reprint of the active revision with the same QR, and a stale or revoked document cannot be printed. The commercial proposal PDF is unchanged.
 
 Version 0.6.2 aligns the read-only Turkish cutting-stage label (Kesim) with API 2.14.0.

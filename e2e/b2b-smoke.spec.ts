@@ -122,10 +122,17 @@ test("an identity without B2B access sees the localized refusal and never reache
 test("a forced temporary password change comes before B2B", async ({ page }) => {
   await mockApi(page, { mustChangePassword: true });
   await login(page);
-  await expect(page.getByRole("heading", { name: "Schimbați parola" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Setați parola personală" })).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("Înainte de a accesa informațiile companiei");
   await expect(page.getByRole("navigation")).toHaveCount(0);
   await page.getByLabel("Parola actuală").fill("parola-corecta");
   await page.getByLabel("Parola nouă", { exact: true }).fill("o parolă nouă și lungă");
+  await page.getByLabel("Confirmați parola nouă").fill("altă parolă nouă și lungă");
+  await page.getByRole("button", { name: "Afișează parola curentă" }).click();
+  await expect(page.getByLabel("Parola actuală")).toHaveAttribute("type", "text");
+  await expect(page.getByLabel("Parola nouă", { exact: true })).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Salvează parola" }).click();
+  await expect(page.getByText("Confirmarea nu coincide cu parola nouă.")).toBeVisible();
   await page.getByLabel("Confirmați parola nouă").fill("o parolă nouă și lungă");
   await page.getByRole("button", { name: "Salvează parola" }).click();
   await expect(page.getByRole("heading", { name: "Bun venit, Elena Vânzări." })).toBeVisible();

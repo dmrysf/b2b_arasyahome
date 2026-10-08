@@ -59,7 +59,7 @@ async function login(page: Page, username: string, password: string) {
 }
 
 async function changePassword(page: Page, current: string, next: string) {
-  await expect(page.getByRole("heading", { name: "Schimbați parola" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Setați parola personală" })).toBeVisible();
   await page.getByLabel("Parola actuală").fill(current);
   await page.getByLabel("Parola nouă", { exact: true }).fill(next);
   await page.getByLabel("Confirmați parola nouă").fill(next);
@@ -99,6 +99,30 @@ test("2 RO and TR, and the same central session is reused after a reload", async
   await expect(page.getByRole("heading", { name: `Hoş geldiniz, ${fixture.b2bUser.name}.` })).toBeVisible();
   expect(browserRequests.filter((entry) => entry.endsWith("/auth/login")).length).toBe(loginsBefore);
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(["arasya.b2b.locale"]);
+});
+
+test("2b a voluntary password change from the account area keeps one central password", async ({ page }) => {
+  track(page);
+  const second = "vanzari e2e a doua parola 2026";
+  const change = async (current: string, next: string) => {
+    if (!(await page.getByRole("button", { name: "Schimbați parola" }).isVisible())) await page.getByRole("button", { name: "Meniu" }).click();
+    await page.getByRole("button", { name: "Schimbați parola" }).click();
+    await expect(page.getByRole("heading", { name: "Schimbați parola" })).toBeVisible();
+    await expect(page.getByRole("note")).toHaveCount(0);
+    await page.getByLabel("Parola actuală").fill(current);
+    await page.getByLabel("Parola nouă", { exact: true }).fill(next);
+    await page.getByLabel("Confirmați parola nouă").fill(next);
+    await page.getByRole("button", { name: "Afișează noua parolă" }).click();
+    await expect(page.getByLabel("Parola nouă", { exact: true })).toHaveAttribute("type", "text");
+    await page.getByRole("button", { name: "Salvează parola" }).click();
+    await expect(page.getByRole("heading", { name: `Bun venit, ${fixture.b2bUser.name}.` })).toBeVisible();
+  };
+  await login(page, fixture.b2bUser.username, NEW_PASSWORD.b2b);
+  await expect(page.getByRole("heading", { name: `Bun venit, ${fixture.b2bUser.name}.` })).toBeVisible();
+  await change(NEW_PASSWORD.b2b, second);
+  const old = await page.evaluate(async ({ api, username, password }) => (await fetch(`${api}/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username, password }) })).status, { api: API, username: fixture.b2bUser.username, password: NEW_PASSWORD.b2b });
+  expect(old).toBe(401);
+  await change(second, NEW_PASSWORD.b2b);
 });
 
 test("3 an identity without B2B access sees the refusal; the server enforces it independently", async ({ page }) => {
