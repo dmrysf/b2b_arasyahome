@@ -31,7 +31,7 @@ test("sales identity completes Classic Order lifecycle through real API without 
   await page.getByLabel("Nume utilizator").fill(fixture.orderUser.username);
   await page.getByLabel("Parolă", { exact: true }).fill(fixture.orderUser.temporaryPassword);
   await page.getByRole("button", { name: "Intrare în cont" }).click();
-  await expect(page.getByRole("heading", { name: "Schimbați parola" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Setați parola personală" })).toBeVisible();
   await page.getByLabel("Parola actuală").fill(fixture.orderUser.temporaryPassword);
   await page.getByLabel("Parola nouă", { exact: true }).fill("classic orders e2e permanent 2026");
   await page.getByLabel("Confirmați parola nouă").fill("classic orders e2e permanent 2026");

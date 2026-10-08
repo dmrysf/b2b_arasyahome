@@ -60,6 +60,8 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   const [state, setState] = useState<AppState>({ kind: "loading" });
   // A one-shot success message carried to the next page (for example "company created").
   const [flash, setFlash] = useState<{ path: string; message: string } | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   const restore = useCallback((notice?: ApiError) => { void restoreSession(api, notice).then(setState); }, [api]);
   const accept = useCallback(async (session: Promise<Session>) => { setState(await resolveSession(api, await session)); }, [api]);
@@ -97,14 +99,19 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
     dirty.current = false;
     try { await api.logout(); } catch { /* the session is gone either way */ }
     setState({ kind: "anonymous" });
+    setChangingPassword(false);
+    setPasswordChanged(false);
     navigate("/");
   }, [api, navigate, mayLeave]);
 
   if (state.kind === "loading") return <div className="boot" role="status"><BrandMark /><p>{t.app.checkingSession}</p></div>;
   if (state.kind === "unavailable") return <div className="boot" role="alert"><BrandMark /><p>{problem(state.problem)}</p><button type="button" className="button button-secondary" onClick={() => { setState({ kind: "loading" }); restore(); }}>{t.common.retry}</button></div>;
   if (state.kind === "anonymous") return <LoginPage notice={state.notice} onLogin={(username, password) => accept(api.login(username, password))} />;
-  if (state.kind === "password") return <ChangePasswordPage displayName={state.session.employee.displayName} onLogout={() => { void logout(); }} onChange={(current, next) => accept(api.changePassword(current, next))} />;
+  if (state.kind === "password") return <ChangePasswordPage displayName={state.session.employee.displayName} username={state.session.employee.username} onLogout={() => { void logout(); }} onChange={(current, next) => accept(api.changePassword(current, next))} />;
   if (state.kind === "no-access") return <NoAccessPage displayName={state.session.employee.displayName} onLogout={() => { void logout(); }} />;
+
+  if (changingPassword) return <ChangePasswordPage voluntary displayName={state.session.employee.displayName} username={state.session.employee.username} onLogout={() => { void logout(); }} onCancel={() => setChangingPassword(false)}
+    onChange={async (current, next) => { await accept(api.changePassword(current, next)); setChangingPassword(false); setPasswordChanged(true); }} />;
 
   const permissions = state.access.permissions;
   const productionCaps = { canView: permissions.includes('b2b.production.view'), canSubmit: permissions.includes('b2b.production.submit') };
@@ -152,7 +159,8 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
     page = <CompaniesPage api={api} canView={canView} canCreate={canCreate} navigate={go} />;
   } else page = <NotFoundPage onHome={() => go("/")} />;
   return (
-    <Shell access={state.access} pathname={pathname} navigate={go} onLogout={() => { void logout(); }}>
+    <Shell access={state.access} pathname={pathname} navigate={go} onLogout={() => { void logout(); }} passwordChanged={passwordChanged}
+      onChangePassword={() => { if (!mayLeave()) return; dirty.current = false; setPasswordChanged(false); setChangingPassword(true); }}>
       {page}
     </Shell>
   );
