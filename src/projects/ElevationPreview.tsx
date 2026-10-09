@@ -8,11 +8,26 @@ const FILL: Record<string, string> = { sheer: "#f3ead9", drapery: "#9c7a4f", bla
 /**
  * Structural 2D elevation of one opening, drawn only from the renderer-neutral scene contract (arasya.scene/1):
  * opening outline, measurement labels and treatment layers with their panel layout. It is a validation sketch,
- * not a renderer; the future 3D view consumes the same scene document.
+ * not a renderer; the future 3D view consumes the same scene document. A missing opening dimension is named, never
+ * drawn with an invented size; the legend lists each treatment's product and the opening's stored position.
  */
-export function ElevationPreview({ opening }: { opening: SceneOpening | null }) {
+export function ElevationPreview({ opening, revision = null }: { opening: SceneOpening | null; revision?: number | null }) {
   const { t } = useI18n(), p = t.projects;
-  if (!opening || opening.width === null || opening.height === null) return <figure className="elevation empty" aria-label={p.preview}><figcaption>{p.preview}</figcaption></figure>;
+  if (!opening) return <figure className="elevation empty" aria-label={p.preview}><figcaption>{p.preview}</figcaption></figure>;
+  const missing = [opening.width === null && p.width, opening.height === null && p.height].filter(Boolean).join(", ");
+  const position = [opening.wallIndex !== null && `${p.wall} ${opening.wallIndex}`, opening.offsetLeft !== null && `${p.offsetLeft}: ${cm(String(opening.offsetLeft))}`,
+    opening.wallWidth !== null && `${p.wallWidth}: ${cm(String(opening.wallWidth))}`].filter(Boolean).join(" · ");
+  const legend = <>
+    {position && <p className="elevation-position">{p.previewPosition}: {position}</p>}
+    {opening.treatments.length > 0 && <ul className="elevation-legend">{opening.treatments.map(layer => <li key={layer.id}>
+      <span className={`swatch swatch-${layer.type}`} aria-hidden="true" />
+      {[p.treatmentTypes[layer.type], layer.product.code || p.previewNoProduct, layer.product.color,
+        layer.width !== null && layer.height !== null ? `${cm(String(layer.width))} × ${cm(String(layer.height))} cm` : null].filter(Boolean).join(" · ")}
+    </li>)}</ul>}
+    <figcaption>{p.previewHint}{revision !== null && ` · ${p.previewRevision(revision)}`}</figcaption>
+  </>;
+  if (opening.width === null || opening.height === null) return <figure className="elevation empty" aria-label={`${p.preview}: ${opening.name}`}>
+    <p className="elevation-missing" role="note">{p.previewMissing(missing)}</p>{legend}</figure>;
   const w = opening.width, h = opening.height, margin = Math.max(w, h) * 0.18, sill = opening.sillHeight ?? 0;
   const viewW = w + margin * 2, viewH = h + margin * 2 + Math.min(sill, h * 0.4);
   const x0 = margin, y0 = margin, unit = Math.max(w, h) / 60;
@@ -33,6 +48,6 @@ export function ElevationPreview({ opening }: { opening: SceneOpening | null }) 
       <text x={x0 + w / 2} y={y0 + h + unit * 3.4} fontSize={unit * 2.4} textAnchor="middle" fill="#15171c">{cm(String(w))} cm</text>
       <text x={x0 + w + unit * 1.2} y={y0 + h / 2} fontSize={unit * 2.4} fill="#15171c">{cm(String(h))}</text>
     </svg>
-    <figcaption>{p.previewHint}</figcaption>
+    {legend}
   </figure>;
 }
