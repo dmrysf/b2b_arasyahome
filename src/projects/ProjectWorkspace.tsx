@@ -223,13 +223,14 @@ function RoomEditor({ api, projectId, ws, editable, busy, run, onDialog, onRemov
     <div className="order-section-title"><h2>{p.openings_} <span className="count">{room.openings.length}</span></h2>
       {editable && <button type="button" className="button button-secondary" disabled={busy !== null} onClick={addOpening}>+ {p.addOpening}</button>}</div>
     {room.openings.map(opening => <OpeningCard key={opening.id} ws={ws} opening={opening} editable={editable} busy={busy} run={run} onDialog={onDialog} onRemove={remove}
-      scene={scene?.rooms[0]?.openings.find(o => o.id === opening.id) ?? null} />)}
+      scene={scene?.rooms[0]?.openings.find(o => o.id === opening.id) ?? null} revision={scene?.revision ?? null} />)}
   </div>;
 }
 
-function OpeningCard({ ws, opening, editable, busy, run, onDialog, onRemove, scene }: {
+function OpeningCard({ ws, opening, editable, busy, run, onDialog, onRemove, scene, revision }: {
   ws: Workspace; opening: Opening; editable: boolean; busy: string | null; run: (label: string, ops: ProjectOperation[]) => Promise<boolean>;
   onDialog: (dialog: Dialog) => void; onRemove: (level: "opening" | "treatment", id: string, name: string) => Promise<void>; scene: Scene["rooms"][number]["openings"][number] | null;
+  revision: number | null;
 }) {
   const { t } = useI18n(), p = t.projects;
   const I = (field: string, label: string, numeric = false, options?: [string, string][]) => <Input ws={ws} id={opening.id} field={field} label={label} numeric={numeric} editable={editable} options={options} />;
@@ -249,7 +250,7 @@ function OpeningCard({ ws, opening, editable, busy, run, onDialog, onRemove, sce
         {I("offsetLeft", p.offsetLeft, true)}{I("wallWidth", p.wallWidth, true)}
         {I("mounting", p.mounting, false, [["", p.none], ...MOUNTINGS.map(v => [v, p.mountings[v]] as [string, string])])}{I("railType", p.railType)}
       </div>
-      <ElevationPreview opening={scene} />
+      <ElevationPreview opening={scene} revision={revision} />
     </div>
     <h4>{p.treatments}</h4>
     {opening.treatments.map(treatment => <TreatmentRow key={treatment.id} ws={ws} treatment={treatment} editable={editable} busy={busy} run={run} onRemove={onRemove} />)}

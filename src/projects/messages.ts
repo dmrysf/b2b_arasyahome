@@ -159,6 +159,10 @@ export const projectsRo = {
   saveHeader: "Salvează datele",
   preview: "Schiță 2D",
   previewHint: "Schiță structurală din datele proiectului (nu este randare).",
+  previewMissing: (fields: string) => `Lipsesc dimensiunile: ${fields}. Schița apare după completarea lor.`,
+  previewRevision: (revision: number) => `Revizia proiectului ${revision}`,
+  previewPosition: "Poziție",
+  previewNoProduct: "fără cod produs",
   wall: "Perete",
   activity: "Istoric proiect",
   actions: {
@@ -327,6 +331,10 @@ export const projectsTr: typeof projectsRo = {
   saveHeader: "Bilgileri kaydet",
   preview: "2D taslak",
   previewHint: "Proje verilerinden yapısal taslak (görselleştirme değildir).",
+  previewMissing: (fields: string) => `Eksik ölçüler: ${fields}. Taslak, ölçüler girildikten sonra görünür.`,
+  previewRevision: (revision: number) => `Proje revizyonu ${revision}`,
+  previewPosition: "Konum",
+  previewNoProduct: "ürün kodu yok",
   wall: "Duvar",
   activity: "Proje geçmişi",
   actions: {
