@@ -132,6 +132,8 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
 .facts div:last-child { border-bottom: 0; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
+/* A long badge (the root account on a 320 px phone) wraps inside its cell instead of leaving the card. */
+.facts dd .badge { height: auto; min-height: 22px; padding: 2px 8px; border-radius: 11px; white-space: normal; }
 .badge { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-right: 4px; background: #eef0f3; color: var(--ink-soft); white-space: nowrap; }
 .badge-success { background: var(--success-soft); color: var(--success); }
 .badge-root { background: var(--sidebar); color: #f1d9ad; }
@@ -183,7 +185,8 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
 .filters { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 12px 14px; }
 .list-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .empty { text-align: center; color: var(--muted); padding: 32px 20px; }
-.table-card { padding: 0; overflow: hidden; }
+/* Columns that do not fit a tablet scroll sideways inside the card; they are never cut off. */
+.table-card { padding: 0; overflow-x: auto; }
 .company-table { width: 100%; border-collapse: collapse; table-layout: auto; }
 .company-table th { text-align: left; font-size: 12px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; padding: 11px 14px; background: #fafbfc; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .company-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: break-word; }

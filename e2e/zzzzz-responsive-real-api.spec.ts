@@ -8,19 +8,32 @@ const fixture = JSON.parse(readFileSync(new URL("./.real-api-fixture.json", impo
 };
 const API = "http://127.0.0.1:8789";
 
-/** Page-level horizontal overflow plus any visible control cut off by the viewport outside its own scroll box. */
+/** Page-level horizontal overflow, any visible control cut off by the viewport, and any content sticking out of its
+ *  card, each outside its own scroll box. The card check holds with any font, so a CI runner's wider fallback font
+ *  cannot be the first to notice it. */
 const clipped = (page: Page) => page.evaluate(() => {
   const width = document.documentElement.clientWidth;
-  const scrollsInside = (el: Element) => {
-    for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+  const scrollsInside = (el: Element, until: Element = document.body) => {
+    for (let node = el.parentElement; node && node !== until; node = node.parentElement) {
       if (/(auto|scroll)/.test(getComputedStyle(node).overflowX)) return true;
     }
     return false;
   };
+  const label = (el: Element) => `${el.tagName.toLowerCase()}: ${(el.textContent || el.getAttribute("aria-label") || el.getAttribute("name") || "").trim().slice(0, 40)}`;
+  // A card that scrolls sideways shows the rest on scroll; screen-reader-only content (1 px, clipped) is not drawn.
+  const visuallyHidden = (el: Element, card: Element) => {
+    for (let node: Element | null = el; node && node !== card; node = node.parentElement) { const r = node.getBoundingClientRect(); if (r.width <= 1 && r.height <= 1) return true; }
+    return false;
+  };
+  const outsideCard = [...document.querySelectorAll("main .card")].filter(card => !/(auto|scroll)/.test(getComputedStyle(card).overflowX)).flatMap(card => {
+    const edge = card.getBoundingClientRect().right;
+    return [...card.querySelectorAll("*")].filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > edge + 1 && !scrollsInside(el, card) && !visuallyHidden(el, card); })
+      .filter(el => !el.parentElement || el.parentElement === card || el.parentElement.getBoundingClientRect().right <= edge + 1).map(label);
+  });
   const cut = [...document.querySelectorAll("main button, main a.button, main input, main select, main textarea, header button, nav a")]
     .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.left < -1 || r.right > width + 1) && !scrollsInside(el); })
-    .map(el => `${el.tagName.toLowerCase()}: ${(el.textContent || el.getAttribute("aria-label") || el.getAttribute("name") || "").trim().slice(0, 40)}`);
-  return { overflow: document.documentElement.scrollWidth - width, cut };
+    .map(label);
+  return { overflow: document.documentElement.scrollWidth - width, cut, outsideCard };
 });
 
 test("daily B2B screens fit 320–1440 px without page overflow or cut-off controls, and nothing is written", async ({ page }) => {
@@ -66,9 +79,10 @@ test("daily B2B screens fit 320–1440 px without page overflow or cut-off contr
       await page.goto(path);
       await expect(page.locator("main h1").first()).toBeVisible();
       await page.waitForLoadState("networkidle");
-      const { overflow, cut } = await clipped(page);
+      const { overflow, cut, outsideCard } = await clipped(page);
       if (overflow > 0) problems.push(`${name} @${width}px scrolls horizontally by ${overflow}px`);
       for (const control of cut) problems.push(`${name} @${width}px cuts off ${control}`);
+      for (const content of outsideCard) problems.push(`${name} @${width}px sticks out of its card: ${content}`);
     }
   }
   expect(problems).toEqual([]);
