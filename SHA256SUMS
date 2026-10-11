@@ -1,10 +1,12 @@
 958299911757bbc5b171bf7922add99429d080ead0d19a579518486a54943e8c  ./.cpanel.yml
 67cca55d2b6989e36a83e88f29f6df0082edcd3fa62943acc8779d70036ace94  ./dist/.htaccess
+85e8c27b27fc07a7c75790f161e49247079c4ff1b9f80d63e75db2d365ee0320  ./dist/apple-touch-icon.png
 56b2f08ad590598cfb571ef76897776393a75f6acd682cac01ce5c7b2ec9fbf4  ./dist/assets/index-B-VE_Ame.css
-9a1b2c67d8713971b17b2c3aa591c3a5d4857320c8ccb6a37744ec1360bb7311  ./dist/assets/index-CHRcVB3T.js
-c20c724409d7e9997c32fa6980d9c2c65801fc971a59c619bc01b45ee6f8f0a9  ./dist/favicon.svg
-f072dc3326d06ca72300ac6cb53e6032b7dfd3c87c5dd7781c8bbc55d917d0af  ./dist/index.html
-ff863ec270b91e96d8b188aba29f38cca537ae224229c7da74db206c24d4e41a  ./dist/release.json
+dc067ca10d81bbf896b7b406d07d8e3751cc02b4967c43de146a0e3e85d155cc  ./dist/assets/index-Bl0Etqlx.js
+4f55cb426655f8983286f0494ac7e7e324422f4002cf0b7629b339dc052db9ed  ./dist/favicon.ico
+9f10e8b119aa718967c306d63974dfe1c3fa0badbb01ed948f86f77d7848e317  ./dist/favicon.svg
+a83b034236bf6efddfc4453fe2b46f1c3a93a92f66e9d385c203afd2e107a7d9  ./dist/index.html
+be3aa5c27a4d51eb51d67a5673718d91fd8c1c682c95ccc99bc6ee5889d237f5  ./dist/release.json
 331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1  ./dist/robots.txt
 24c3d8884cafcfd031306a752673721e0e300829ba9cd752c17ecd7288214870  ./scripts/b2b-release-common.sh
 6ac5df1eae42226ac04d8632d774cf81b3147e39c29f130f94a0c3dcad704c13  ./scripts/cpanel-deploy.sh
