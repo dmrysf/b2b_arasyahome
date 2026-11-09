@@ -78,3 +78,18 @@ test('the home page names the available modules in Romanian and Turkish', () => 
   assert.match(MESSAGES.tr.home.foundationBody, /Şirketler, Siparişler .* ve Cari hesaplar/);
   assert.doesNotMatch(MESSAGES.tr.home.foundationBody, /İlk kullanılabilir modül/);
 });
+
+test('the order type is explicit, strictly mapped and independent of the line kind', () => {
+ assert.equal(orderFields(emptyOrder('c')).orderType, null, 'no type is preselected');
+ assert.equal(orderFields({ ...emptyOrder('c'), orderType: 'FULL_ROLL_BAG', lines: [{ ...emptyLine(), kind: 'curtain' }] }).orderType, 'FULL_ROLL_BAG');
+ assert.equal(mapOrderDetail({ order, capabilities }).order.orderType, null, 'an older API without the field maps to no type');
+ assert.equal(mapOrderDetail({ order: { ...order, orderType: 'CUT_ONLY' }, capabilities }).order.orderType, 'CUT_ONLY');
+ assert.throws(() => mapOrderDetail({ order: { ...order, orderType: 'EXPRESS' }, capabilities }), /INVALID_RESPONSE/);
+ assert.throws(() => mapOrderDetail({ order: { ...order, financeDecision: { mode: 'on', outcome: 'ALLOWED', reasons: [] } }, capabilities }), /INVALID_RESPONSE/);
+ assert.deepEqual(mapOrderDetail({ order: { ...order, financeDecision: { mode: 'enforce', outcome: 'ALLOWED', reasons: [], profile: { riskColor: 'GREEN' } } }, capabilities }).order.financeDecision, { mode: 'enforce', outcome: 'ALLOWED', reasons: [] });
+ for (const m of [MESSAGES.ro.orders, MESSAGES.tr.orders]) {
+  assert.deepEqual(Object.keys(m.orderTypes), ['FULL_TAILORING', 'CUT_ONLY', 'FULL_ROLL_BAG']);
+ }
+ assert.equal(MESSAGES.ro.orders.orderTypes.CUT_ONLY, 'Doar debitare'); assert.equal(MESSAGES.tr.orders.orderTypes.FULL_ROLL_BAG, 'Tam Poşet / Rulo');
+ assert.equal(MESSAGES.ro.orders.orderTypeRoutes.FULL_ROLL_BAG, 'Pregătire material → Livrare');
+});

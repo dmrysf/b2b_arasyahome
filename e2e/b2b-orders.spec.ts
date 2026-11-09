@@ -31,9 +31,14 @@ test('classic order saves, finalizes, duplicates and shows exact server totals i
  await page.getByLabel('TVA % 1').fill('19');
  await expect(page.getByTestId('order-totals')).toContainText('160.65 RON');
  await expect(page.getByLabel('Monedă')).toBeDisabled();
+ // The order type is an explicit choice, separate from the line kind; no type is preselected.
+ await expect(page.getByTestId('order-type-badge')).toHaveText('Tip neales');
+ await page.getByRole('radio',{name:/Doar debitare/}).check();
+ await expect(page.getByTestId('order-type-badge')).toHaveText('Doar debitare');
  await page.getByRole('button',{name:'Salvează ciorna',exact:true}).click();
  await expect(page.getByRole('heading',{name:'B2B-ORD-000001'})).toBeVisible();
  await page.getByRole('button',{name:'Finalizează',exact:true}).click();
+ await expect(page.getByTestId('confirm-order-type')).toContainText('Pregătire material → Livrare');
  await page.getByRole('button',{name:'Confirmă finalizarea'}).click();
  await expect(page.getByText('Finalizată',{exact:true}).first()).toBeVisible();
  await expect(page.getByLabel('Cod produs 1',{exact:true})).toBeDisabled();
@@ -138,7 +143,7 @@ test('frozen orders show their historical contact and addresses, and line counts
   const [contact] = api.companies.contacts.get(companyId)!;
   const [billing, delivery] = api.companies.addresses.get(companyId)!;
   const line = (code: string) => ({ ...orderFields({ ...emptyOrder(companyId), lines: [{ ...emptyLine(), productCode: code, quantity: '1', unitPriceNet: '1.00', vatPercent: '19' }] }).lines[0], id: null });
-  const fields = { ...orderFields(emptyOrder(companyId)), contactId: contact.id, billingAddressId: billing.id, deliveryAddressId: delivery.id, lines: [line('ONE')] };
+  const fields = { ...orderFields(emptyOrder(companyId)), orderType: 'FULL_TAILORING' as const, contactId: contact.id, billingAddressId: billing.id, deliveryAddressId: delivery.id, lines: [line('ONE')] };
   const order = api.orders.seed(fields);
   expect(api.orders.handle('POST', `/b2b/orders/${order.id}/finalize`, new URLSearchParams(), { expectedVersion: 1 }, crypto.randomUUID()).status).toBe(200);
   // The live contact changes after finalization; the order keeps the historical name.

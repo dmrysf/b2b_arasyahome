@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import type { B2bApi } from "../api/client";
 import type { CompanyDetail, CompanyListItem } from "../api/companies";
-import type { OrderCapabilities, OrderDetail } from "../api/orders";
+import { ORDER_TYPES, type OrderCapabilities, type OrderDetail } from "../api/orders";
 import { useI18n } from "../i18n/context";
 import { OrderActivity } from "./OrderActivity";
 import { FieldError, OrderLineEditor } from "./OrderLineEditor";
@@ -83,6 +83,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
       <a className="back-link" href="/comenzi" onClick={event => { event.preventDefault(); navigate("/comenzi"); }}>← {o.title}</a>
       <p className="eyebrow">{o.workstation}</p><h1>{order?.code ?? o.newOrder}</h1>
       <div className="order-heading-meta"><span className={`badge status-${order?.status ?? "draft"}`}>{o[order?.status ?? "draft"]}</span>
+        <span className={`badge order-type-badge${e.draft.orderType ? "" : " order-type-missing"}`} data-testid="order-type-badge">{e.draft.orderType ? o.orderTypes[e.draft.orderType] : o.noOrderType}</span>
         {order && <span>{o.version} {order.version} · {dateTime(order.updatedAt)}</span>}
         {e.dirty && <span className="unsaved-dot" role="status">{o.unsavedState}</span>}
       </div>
@@ -125,6 +126,16 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
             (company?.addresses ?? []).filter(a => a.status === "active" && a.type === "delivery").map(a => ({ id: a.id, label: addressLabel(a) })))}
         </div>
         {e.currencyIsLocked && !e.frozen && <p className="muted">{o.currencyHint}</p>}
+        <fieldset className="order-type" aria-describedby="order-type-hint">
+          <legend>{o.orderType}</legend>
+          <p id="order-type-hint" className="muted">{o.orderTypeHint}</p>
+          <div className="order-type-options" role="radiogroup" aria-label={o.orderType}>{ORDER_TYPES.map(type =>
+            <label key={type} htmlFor={`order-type-${type}`} aria-label={`${o.orderTypes[type]} — ${o.orderTypeRoutes[type]}`} className={`order-type-option${e.draft.orderType === type ? " selected" : ""}`}>
+              <input id={`order-type-${type}`} type="radio" name="orderType" value={type} checked={e.draft.orderType === type} onChange={() => e.change({ orderType: type })} />
+              <span><strong>{o.orderTypes[type]}</strong><small>{o.orderTypeRoutes[type]}</small><small className="muted">{o.orderTypeWork[type]}</small></span>
+            </label>)}</div>
+          <FieldError reason={e.fields.orderType} />
+        </fieldset>
         <div className="grid-2">{(["notes", "productionNotes"] as const).map(key => <label key={key}>{o[key]}<textarea maxLength={2000} value={e.draft[key]} onChange={event => e.change({ [key]: event.target.value })} /><FieldError reason={e.fields[key]} /></label>)}</div>
       </section>
       <section className="order-lines"><div className="order-section-title"><div><h2>{o.lines} <span className="count">{e.draft.lines.length}</span></h2><p className="muted">{o.measureHint}</p></div>
@@ -139,6 +150,9 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
       <p>{o.created}: {dateTime(order!.createdAt)} · {order!.createdBy.displayName}</p>
       {order!.finalizedAt && <p>{o.finalized}: {dateTime(order!.finalizedAt)} · {order!.finalizedBy?.displayName}</p>}
       {order!.cancelledAt && <p>{o.cancelled}: {dateTime(order!.cancelledAt)} · {order!.updatedBy.displayName}</p>}
+      {order!.orderType && <p data-testid="frozen-order-type">{o.orderType}: <strong>{o.orderTypes[order!.orderType]}</strong> · {o.orderTypeRoutes[order!.orderType]}</p>}
+      {order!.financeDecision && <p data-testid="finance-decision">{o.financeDecision}: {o.financeModes[order!.financeDecision.mode]} · {o.financeOutcomes[order!.financeDecision.outcome]}
+        {order!.financeDecision.reasons.length > 0 && <> · <span className="mono">{order!.financeDecision.reasons.join(", ")}</span></>}</p>}
       {[["contactSnapshot", o.contact], ["billingAddressSnapshot", o.billing], ["deliveryAddressSnapshot", o.delivery]].map(([key, label]) => {
         const snapshot = order![key as "contactSnapshot" | "billingAddressSnapshot" | "deliveryAddressSnapshot"];
         return snapshot ? <div key={key}><h3>{label}</h3><p>{Object.entries(snapshot).filter(([key, v]) => key !== "id" && key !== "type" && typeof v === "string").map(([, v]) => String(v)).join(" · ")}</p></div> : null;
@@ -149,10 +163,11 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
         : <p>{e.calculationError !== null ? problem(e.calculationError) : e.calculation ? o.incomplete : o.pending}</p>}</div>
       <div className="order-actions">
         {e.editable && <button type="button" className="button" disabled={e.busy || e.conflict || !e.draft.companyId || (!!id && !e.dirty)} onClick={() => void e.mutate("save")}>{e.busy ? t.common.saving : o.save}</button>}
-        {id && e.caps.canFinalize && !e.frozen && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict || !e.calculation?.complete} onClick={() => e.setConfirm("finalize")}>{o.finalize}</button>}
+        {id && e.caps.canFinalize && !e.frozen && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict || !e.calculation?.complete || !e.draft.orderType} onClick={() => e.setConfirm("finalize")}>{o.finalize}</button>}
         {id && e.caps.canCancel && !order?.productionSubmitted && order?.status !== "cancelled" && <button type="button" className="button button-ghost" disabled={e.busy || e.dirty || e.conflict} onClick={() => e.setConfirm("cancel")}>{o.cancelOrder}</button>}
         {id && e.caps.canCreate && e.caps.canView && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict} onClick={() => void e.mutate("duplicate")}>{o.duplicate}</button>}
       </div>
+      {id && !e.frozen && !e.draft.orderType && <p className="muted" role="note">{o.orderTypeRequired}</p>}
       {!e.frozen && <p className="muted keyboard-hint">{o.keyboardHint}</p>}
     </section>
     {e.confirm && e.detail && <OrderConfirmation detail={e.detail} action={e.confirm} busy={e.busy} onConfirm={() => void e.mutate(e.confirm!)} onClose={() => e.setConfirm(null)} />}
@@ -179,6 +194,7 @@ function OrderConfirmation({ detail, action, busy, onConfirm, onClose }: {
     <h2 id="order-confirm-title">{action === "finalize" ? o.finalizeQuestion : o.cancelQuestion}</h2>
     <CompanySnapshot detail={detail} />
     <p>{detail.order.code} · {o.lineCount(detail.order.lines.length)} · {detail.order.currencyCode}</p>
+    {detail.order.orderType && <p data-testid="confirm-order-type">{o.orderType}: <strong>{o.orderTypes[detail.order.orderType]}</strong> · {o.orderTypeRoutes[detail.order.orderType]}</p>}
     <dl className="order-summary">{(["net", "vat", "gross"] as const).map(k => <div key={k}><dt>{o[k]}</dt><dd>{detail.order.calculation.totals?.[k] ?? "—"} {detail.order.currencyCode}</dd></div>)}</dl>
     <p>{action === "finalize" ? o.freezeHint : o.cancelHint}</p><p className="muted">{o.productionBoundary}</p>
     <div className="order-actions"><button type="button" className="button button-secondary" disabled={busy} onClick={onClose}>{o.cancel}</button>

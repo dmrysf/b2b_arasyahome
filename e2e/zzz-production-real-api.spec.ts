@@ -16,7 +16,7 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   const headers = () => ({ Origin: fixture.origins.admin, 'X-CSRF-Token': csrf, 'Idempotency-Key': crypto.randomUUID() });
   const companyResponse = await admin.post(API + '/b2b/companies', { headers: headers(), data: { legalName: 'Production Frozen Client', countryCode: 'RO', taxIdentifier: 'PROD-E2E-1' } });
   expect(companyResponse.status()).toBe(201); const companyId = (await companyResponse.json()).companyId as string;
-  const fields: OrderFields = { companyId, currencyCode: 'EUR', contactId: null, billingAddressId: null, deliveryAddressId: null,
+  const fields: OrderFields = { companyId, currencyCode: 'EUR', orderType: 'FULL_TAILORING', contactId: null, billingAddressId: null, deliveryAddressId: null,
     customerReference: null, notes: 'Commercial note', productionNotes: 'Frozen workshop note', lines: ['curtain','drapery','other'].map(kind => ({
       id: null, kind: kind as 'curtain' | 'drapery' | 'other', productCode: `PROD-${kind}`, productName: null, variant: 'Wave', color: 'White', width: '200', height: '260',
       quantity: 4, meters: '13.5', pricingUnit: 'meter', unitPriceNet: '10.00', discountPercent: '0', vatPercent: '19', notes: 'Line snapshot', productionNotes: 'Workshop line',

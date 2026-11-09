@@ -74,7 +74,7 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
         (!search || [o.code, String(o.companySnapshot.legalName), o.customerReference ?? "", ...o.lines.map(l => l.productCode)].some(v => v.toLowerCase().includes(search))));
       const start = Number(query.get("cursor") ?? 0), limit = Number(query.get("limit") ?? 25);
       return { status: 200, body: { items: filtered.slice(start, start + limit).map(o => ({ id: o.id, code: o.code, companyId: o.companyId,
-        companyName: o.companySnapshot.legalName, currencyCode: o.currencyCode, status: o.status, version: o.version, createdAt: o.createdAt, updatedAt: o.updatedAt,
+        companyName: o.companySnapshot.legalName, currencyCode: o.currencyCode, orderType: o.orderType ?? null, status: o.status, version: o.version, createdAt: o.createdAt, updatedAt: o.updatedAt,
         createdBy: o.createdBy, customerReference: o.customerReference, totals: o.calculation.totals })), nextCursor: filtered.length > start + limit ? String(start + limit) : null, capabilities: capabilities() } };
     }
     let order = orders.find(o => o.id === id);
@@ -99,6 +99,8 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
         if (order.status === "finalized" && action !== "cancel") return fail(409, "ORDER_FINALIZED");
         if (action === "finalize") {
           if (!order.calculation.complete) return fail(422, "VALIDATION_FAILED");
+          // Like the server: the order type is chosen explicitly and required at finalization.
+          if (!order.orderType) return { status: 422, body: { error: { code: "VALIDATION_FAILED", message: "Choose the order type.", details: { fields: { orderType: "required" } } } } };
           order.status = "finalized"; order.finalizedAt = new Date().toISOString(); order.finalizedBy = actor;
           order.companySnapshot = snapshot(order.companyId)!;
           // Like the server, freeze the selected contact and addresses with the fields the API returns.

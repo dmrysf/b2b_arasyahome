@@ -1,10 +1,10 @@
-import type { Currency, LineInput, OrderFields } from "../api/orders";
+import type { Currency, LineInput, OrderFields, OrderType } from "../api/orders";
 export type LineDraft = Omit<LineInput, "id" | "quantity" | "productName" | "variant" | "color" | "width" | "height" | "meters" | "unitPriceNet" | "vatPercent" | "notes" | "productionNotes"> & {
   id: string; quantity: string; productName: string; variant: string; color: string; width: string; height: string;
   meters: string; unitPriceNet: string; vatPercent: string; notes: string; productionNotes: string;
 };
 export type OrderDraft = {
-  companyId: string; currencyCode: Currency; contactId: string; billingAddressId: string; deliveryAddressId: string;
+  companyId: string; currencyCode: Currency; orderType: OrderType | ""; contactId: string; billingAddressId: string; deliveryAddressId: string;
   customerReference: string; notes: string; productionNotes: string; lines: LineDraft[];
 };
 export const emptyLine = (): LineDraft => ({
@@ -12,13 +12,14 @@ export const emptyLine = (): LineDraft => ({
   quantity: "1", meters: "", pricingUnit: "piece", unitPriceNet: "", discountPercent: "0", vatPercent: "", notes: "", productionNotes: "",
 });
 export const emptyOrder = (companyId = ""): OrderDraft => ({
-  companyId, currencyCode: "RON", contactId: "", billingAddressId: "", deliveryAddressId: "", customerReference: "", notes: "", productionNotes: "", lines: [],
+  // No default type: the employee chooses it explicitly; nothing is inferred from the products.
+  companyId, currencyCode: "RON", orderType: "", contactId: "", billingAddressId: "", deliveryAddressId: "", customerReference: "", notes: "", productionNotes: "", lines: [],
 });
 const nullable = (s: string) => s.trim() || null;
 const dec = (s: string) => s.trim().replace(",", ".");
 export function orderFields(d: OrderDraft): OrderFields {
   return {
-    companyId: d.companyId, currencyCode: d.currencyCode, contactId: nullable(d.contactId),
+    companyId: d.companyId, currencyCode: d.currencyCode, orderType: d.orderType || null, contactId: nullable(d.contactId),
     billingAddressId: nullable(d.billingAddressId), deliveryAddressId: nullable(d.deliveryAddressId),
     customerReference: nullable(d.customerReference), notes: nullable(d.notes), productionNotes: nullable(d.productionNotes),
     lines: d.lines.map(l => ({
@@ -31,7 +32,7 @@ export function orderFields(d: OrderDraft): OrderFields {
   };
 }
 export function orderDraft(f: OrderFields): OrderDraft {
-  return { ...f, contactId: f.contactId ?? "", billingAddressId: f.billingAddressId ?? "", deliveryAddressId: f.deliveryAddressId ?? "",
+  return { ...f, orderType: f.orderType ?? "", contactId: f.contactId ?? "", billingAddressId: f.billingAddressId ?? "", deliveryAddressId: f.deliveryAddressId ?? "",
     customerReference: f.customerReference ?? "", notes: f.notes ?? "", productionNotes: f.productionNotes ?? "",
     lines: f.lines.map(l => ({ ...l, id: l.id!, quantity: String(l.quantity), productName: l.productName ?? "", variant: l.variant ?? "", color: l.color ?? "",
       width: l.width ?? "", height: l.height ?? "", meters: l.meters ?? "", unitPriceNet: l.unitPriceNet ?? "", vatPercent: l.vatPercent ?? "",

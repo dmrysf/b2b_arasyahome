@@ -27,7 +27,7 @@ test("current account: receivables from finalized orders, payment with allocatio
   const line = { productCode: "C-ACC", productName: null, variant: null, color: null, kind: "curtain", width: null, height: null, quantity: 4, meters: "13.5",
     pricingUnit: "meter", unitPriceNet: "10.00", discountPercent: "0", vatPercent: "19", notes: null, productionNotes: null };
   const finalized = async (currencyCode: "RON" | "EUR") => {
-    const draft = await admin.post(API + "/b2b/orders", { headers: headers(), data: { companyId, currencyCode, contactId: null, billingAddressId: null, deliveryAddressId: null, notes: null, lines: [line] } });
+    const draft = await admin.post(API + "/b2b/orders", { headers: headers(), data: { companyId, currencyCode, orderType: "FULL_TAILORING", contactId: null, billingAddressId: null, deliveryAddressId: null, notes: null, lines: [line] } });
     expect(draft.status()).toBe(201);
     const order = (await draft.json()).detail.order as { id: string; code: string };
     expect((await admin.post(`${API}/b2b/orders/${order.id}/finalize`, { headers: headers(), data: { expectedVersion: 1 } })).status()).toBe(200);
