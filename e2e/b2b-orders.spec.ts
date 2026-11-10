@@ -247,7 +247,7 @@ test('zero-downtime release: B2B 0.9.x on Operations API 2.66.0 neither shows no
  expect(bodies.length).toBeGreaterThan(0);
  expect(bodies.some(b=>Object.hasOwn(b as object,'orderType'))).toBe(false);
 });
-test('feature matrix: the finance panel follows financeGate and the order type follows orderTypes, never the order data alone',async({page})=>{
+test('feature matrix: the finance panel follows financeGate and the order type (also of a historical typed order) follows orderTypes, never the order data alone',async({page})=>{
  const gateOff={configured:true,finalizationMode:'off',releaseMode:'off',preview:{phase:'finalization',mode:'off',outcome:'NOT_EVALUATED',reasons:[]}};
  for (const [features,panel,types] of [[[],false,false],[['financeGate'],true,false],[['orderTypes'],false,true],[['orderTypes','financeGate'],true,true]] as const) {
   const api=await mockApi(page,{loggedIn:true,permissions:perms,features:[...features]});const companyId=api.companies.seed({legalName:'Synthetic Matrix SRL',taxIdentifier:'4321'});
@@ -261,6 +261,18 @@ test('feature matrix: the finance panel follows financeGate and the order type f
   await expect(page.locator('fieldset.order-type'),label).toHaveCount(types?1:0);
   await expect(page.getByTestId('order-type-badge'),label).toHaveCount(types?1:0);
   if(!panel) await expect(page.getByText('Eligibilitate financiară'),label).toHaveCount(0);
+  // A historical typed order (created while order types were on): the finalize dialog and the finalized details show its type only with orderTypes.
+  const typed=api.orders.seed(orderFields({...emptyOrder(companyId),orderType:'CUT_ONLY',lines:[{...emptyLine(),productCode:'P2',quantity:'1',unitPriceNet:'10.00',vatPercent:'19'}]}));
+  await page.goto(`/comenzi/${typed.id}`);
+  await expect(page.getByRole('heading',{name:typed.code})).toBeVisible();
+  await page.getByRole('button',{name:'Finalizează',exact:true}).click();
+  await expect(page.getByRole('dialog'),label).toContainText(typed.code);
+  await expect(page.getByTestId('confirm-order-type'),label).toHaveCount(types?1:0);
+  await page.getByRole('button',{name:'Confirmă finalizarea'}).click();
+  await expect(page.getByText('Finalizată',{exact:true}).first(),label).toBeVisible();
+  await expect(page.getByTestId('frozen-order-type'),label).toHaveCount(types?1:0);
+  if(!types) await expect(page.getByText(/Doar debitare|Pregătire material → Livrare|Tip neales/),label).toHaveCount(0);
+  else await expect(page.getByTestId('frozen-order-type'),label).toContainText('Doar debitare');
   await page.unrouteAll({behavior:'ignoreErrors'});
  }
 });

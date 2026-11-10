@@ -155,7 +155,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
       <p>{o.created}: {dateTime(order!.createdAt)} · {order!.createdBy.displayName}</p>
       {order!.finalizedAt && <p>{o.finalized}: {dateTime(order!.finalizedAt)} · {order!.finalizedBy?.displayName}</p>}
       {order!.cancelledAt && <p>{o.cancelled}: {dateTime(order!.cancelledAt)} · {order!.updatedBy.displayName}</p>}
-      {order!.orderType && <p data-testid="frozen-order-type">{o.orderType}: <strong>{o.orderTypes[order!.orderType]}</strong> · {o.orderTypeRoutes[order!.orderType]}</p>}
+      {orderTypes && order!.orderType && <p data-testid="frozen-order-type">{o.orderType}: <strong>{o.orderTypes[order!.orderType]}</strong> · {o.orderTypeRoutes[order!.orderType]}</p>}
       {[["contactSnapshot", o.contact], ["billingAddressSnapshot", o.billing], ["deliveryAddressSnapshot", o.delivery]].map(([key, label]) => {
         const snapshot = order![key as "contactSnapshot" | "billingAddressSnapshot" | "deliveryAddressSnapshot"];
         return snapshot ? <div key={key}><h3>{label}</h3><p>{Object.entries(snapshot).filter(([key, v]) => key !== "id" && key !== "type" && typeof v === "string").map(([, v]) => String(v)).join(" · ")}</p></div> : null;
@@ -174,7 +174,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
       {orderTypes && id && !e.frozen && !e.draft.orderType && <p className="muted" role="note">{o.orderTypeRequired}</p>}
       {!e.frozen && <p className="muted keyboard-hint">{o.keyboardHint}</p>}
     </section>
-    {e.confirm && e.detail && <OrderConfirmation detail={e.detail} action={e.confirm} busy={e.busy} onConfirm={() => void e.mutate(e.confirm!)} onClose={() => e.setConfirm(null)} />}
+    {e.confirm && e.detail && <OrderConfirmation detail={e.detail} action={e.confirm} orderTypes={orderTypes} busy={e.busy} onConfirm={() => void e.mutate(e.confirm!)} onClose={() => e.setConfirm(null)} />}
     {id && e.caps.canView && <OrderActivity api={api} id={id} version={order!.version} />}
   </form>;
 }
@@ -185,8 +185,9 @@ function CompanySnapshot({ detail }: { detail: OrderDetail }) {
     <p>{[s.companyCode, s.displayName, s.countryCode, s.taxIdentifier, s.vatNumber, s.registrationNumber].filter(Boolean).join(" · ")}</p></div>;
 }
 
-function OrderConfirmation({ detail, action, busy, onConfirm, onClose }: {
-  detail: OrderDetail; action: "finalize" | "cancel"; busy: boolean; onConfirm: () => void; onClose: () => void;
+/** Finalize/cancel dialog. A historical order type is shown only while the server announces order types (`orderTypes`). */
+export function OrderConfirmation({ detail, action, orderTypes, busy, onConfirm, onClose }: {
+  detail: OrderDetail; action: "finalize" | "cancel"; orderTypes: boolean; busy: boolean; onConfirm: () => void; onClose: () => void;
 }) {
   const { t } = useI18n(), o = t.orders, dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -198,7 +199,7 @@ function OrderConfirmation({ detail, action, busy, onConfirm, onClose }: {
     <h2 id="order-confirm-title">{action === "finalize" ? o.finalizeQuestion : o.cancelQuestion}</h2>
     <CompanySnapshot detail={detail} />
     <p>{detail.order.code} · {o.lineCount(detail.order.lines.length)} · {detail.order.currencyCode}</p>
-    {detail.order.orderType && <p data-testid="confirm-order-type">{o.orderType}: <strong>{o.orderTypes[detail.order.orderType]}</strong> · {o.orderTypeRoutes[detail.order.orderType]}</p>}
+    {orderTypes && detail.order.orderType && <p data-testid="confirm-order-type">{o.orderType}: <strong>{o.orderTypes[detail.order.orderType]}</strong> · {o.orderTypeRoutes[detail.order.orderType]}</p>}
     <dl className="order-summary">{(["net", "vat", "gross"] as const).map(k => <div key={k}><dt>{o[k]}</dt><dd>{detail.order.calculation.totals?.[k] ?? "—"} {detail.order.currencyCode}</dd></div>)}</dl>
     <p>{action === "finalize" ? o.freezeHint : o.cancelHint}</p><p className="muted">{o.productionBoundary}</p>
     <div className="order-actions"><button type="button" className="button button-secondary" disabled={busy} onClick={onClose}>{o.cancel}</button>

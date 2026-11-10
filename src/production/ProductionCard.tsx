@@ -27,6 +27,22 @@ export function ProductionRouteDetails({ route, orderTypes }: { route: Productio
   </>;
 }
 
+/**
+ * Stage progress of a submitted order. A short route (CUT_ONLY, FULL_ROLL_BAG) is counted along its own steps only while the
+ * server announces order types; with the switch off even a historical typed order shows the canonical 14-stage progress,
+ * so neither the type nor the route leaks from the data.
+ */
+export function ProductionProgress({ production, orderTypes }: { production: Extract<Production, { submitted: true }>; orderTypes: boolean }) {
+  const { t } = useI18n(), p = t.production, route = production.route;
+  if (orderTypes && route?.shortRoute) {
+    const step = route.stages.indexOf(production.stage.id) + 1;
+    return <><p>{p.progressRoute(step, route.stages.length)}</p>
+      <progress aria-label={p.title} max={route.stages.length} value={production.completedAt ? route.stages.length : step} /></>;
+  }
+  return <><p>{p.progress(production.stage.ordinal, production.totalStages)}</p>
+    <progress aria-label={p.title} max={production.totalStages} value={production.completedAt ? 14 : production.stage.ordinal} /></>;
+}
+
 export function ProductionCard({ api, order, capabilities, orderTypes, disabled, onSubmitted }: {
   api: B2bApi; order: Order; capabilities: ProductionCapabilities; orderTypes: boolean; disabled: boolean; onSubmitted: () => void;
 }) {
@@ -97,13 +113,7 @@ export function ProductionCard({ api, order, capabilities, orderTypes, disabled,
     <p className="badge">{submitted ? production?.submitted && production.completedAt ? p.completed : p.submitted : p.notSubmitted}</p>
     {capabilities.canView && production?.submitted && <>
       <h3>{stageLabel(production.stage)}</h3>
-      {production.route?.shortRoute ? <>
-        <p>{p.progressRoute(production.route.stages.indexOf(production.stage.id) + 1, production.route.stages.length)}</p>
-        <progress aria-label={p.title} max={production.route.stages.length} value={production.completedAt ? production.route.stages.length : production.route.stages.indexOf(production.stage.id) + 1} />
-      </> : <>
-        <p>{p.progress(production.stage.ordinal, production.totalStages)}</p>
-        <progress aria-label={p.title} max={production.totalStages} value={production.completedAt ? 14 : production.stage.ordinal} />
-      </>}
+      <ProductionProgress production={production} orderTypes={orderTypes} />
       <ProductionRouteDetails route={production.route} orderTypes={orderTypes} />
       <dl className="production-details">
         <div><dt>{p.sentAt}</dt><dd>{dateTime(production.submittedAt)}</dd></div>
@@ -119,18 +129,21 @@ export function ProductionCard({ api, order, capabilities, orderTypes, disabled,
     <p className="muted">{submitted ? p.cancelBlocked : order.status === 'draft' ? p.draftHint : order.status === 'cancelled' ? p.cancelledHint : p.hint}</p>
     <p className="muted">{p.operator}</p>
     {canSubmit && <button type="button" className="button" onClick={() => setConfirm(true)}>{p.submit}</button>}
-    {confirm && <ProductionConfirmation order={order} busy={busy} error={error} onClose={() => setConfirm(false)} onConfirm={() => void submit()} />}
+    {confirm && <ProductionConfirmation order={order} orderTypes={orderTypes} busy={busy} error={error} onClose={() => setConfirm(false)} onConfirm={() => void submit()} />}
   </section>;
 }
-function ProductionConfirmation({ order, busy, error, onClose, onConfirm }: { order: Order; busy: boolean; error: unknown; onClose: () => void; onConfirm: () => void }) {
+/** Submission dialog. The order type and the route sentence follow the `orderTypes` feature, never the order data alone. */
+export function ProductionConfirmation({ order, orderTypes, busy, error, onClose, onConfirm }: {
+  order: Order; orderTypes: boolean; busy: boolean; error: unknown; onClose: () => void; onConfirm: () => void;
+}) {
   const { t, problem } = useI18n(), p = t.production, dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { const element = dialog.current!, focused = document.activeElement; element.showModal();
     return () => { element.close(); if (focused instanceof HTMLElement && focused.isConnected) focused.focus(); }; }, []);
   return <dialog ref={dialog} className="order-dialog" aria-labelledby="production-confirm-title" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
     <h2 id="production-confirm-title">{p.question}</h2>
     <p>{order.code} · {String(order.companySnapshot.legalName ?? '')} · {t.orders.lineCount(order.lines.length)}</p>
-    {order.orderType && <p data-testid="production-confirm-type">{t.orders.orderType}: <strong>{t.orders.orderTypes[order.orderType]}</strong> · {t.orders.orderTypeRoutes[order.orderType]}</p>}
-    <p className="muted">{p.routeConfirm}</p>
+    {orderTypes && order.orderType && <p data-testid="production-confirm-type">{t.orders.orderType}: <strong>{t.orders.orderTypes[order.orderType]}</strong> · {t.orders.orderTypeRoutes[order.orderType]}</p>}
+    {orderTypes && <p className="muted" data-testid="production-confirm-route">{p.routeConfirm}</p>}
     <ul className="production-confirm-lines" aria-label={t.orders.lines}>{order.lines.map((line, index) => <li key={line.id ?? index}>
       <strong>{line.productCode}</strong> · {t.orders[line.kind]} · {t.orders.quantity}: {line.quantity}
       {line.meters !== null && <> · {t.orders.meters}: {line.meters}</>}
