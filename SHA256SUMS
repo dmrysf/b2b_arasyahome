@@ -2,11 +2,11 @@
 67cca55d2b6989e36a83e88f29f6df0082edcd3fa62943acc8779d70036ace94  ./dist/.htaccess
 85e8c27b27fc07a7c75790f161e49247079c4ff1b9f80d63e75db2d365ee0320  ./dist/apple-touch-icon.png
 526d2ab6b5c252bbd4d5b9ca9f1fe68c6ad205a889bc0efc681462bb69f2f11d  ./dist/assets/index-Bti_OUet.css
-53493a25d764ba5efb6c06ec8c148b951a6989bde060a97599ed17b6afc40d1b  ./dist/assets/index-DprJTqHs.js
+93da736cc9d98d5197da71ca9bb1f2c49bfb6b04eac075eb9cc3e76508fc56be  ./dist/assets/index-Dur2l2TJ.js
 4f55cb426655f8983286f0494ac7e7e324422f4002cf0b7629b339dc052db9ed  ./dist/favicon.ico
 9f10e8b119aa718967c306d63974dfe1c3fa0badbb01ed948f86f77d7848e317  ./dist/favicon.svg
-32e015a5aab9e683c67e08d2244708f558557368655cd248115a26ff724b8506  ./dist/index.html
-24581bf96544802422645a10076734345635fc26891431339dba7fa6eb9d5836  ./dist/release.json
+ba1e1ec6c43ae0af776cc4fa92bb531f5e0ae845b36fc13b6bb0831fae657cfb  ./dist/index.html
+d92940f9b0eff45bac5015614de844fc8b5e7f800c441b1cb52f4a2e1c07b685  ./dist/release.json
 331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1  ./dist/robots.txt
 24c3d8884cafcfd031306a752673721e0e300829ba9cd752c17ecd7288214870  ./scripts/b2b-release-common.sh
 6ac5df1eae42226ac04d8632d774cf81b3147e39c29f130f94a0c3dcad704c13  ./scripts/cpanel-deploy.sh
