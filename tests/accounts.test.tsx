@@ -132,3 +132,25 @@ test("without view permission the accounts page explains it and requests nothing
   assert.match(html, /Nu aveți permisiunea de a vedea conturile curente\./);
   assert.equal(requested, false);
 });
+
+test("API 2.68.0: refund movements, Finance-owned movements, read-only accounts and Finance requests are mapped strictly", async () => {
+  const refund = mapMovement({ ...movement, type: "refund", orderId: null, orderCode: null, method: "bank_transfer", allocated: null, open: null });
+  assert.equal(refund.type, "refund");
+  assert.equal(refund.postedByFinance, true, "every refund is owned by Finance");
+  assert.equal(mapMovement({ ...movement, type: "payment", method: "bank_transfer", postedByFinance: true }).postedByFinance, true);
+  assert.equal(mapMovement(movement).postedByFinance, false, "an older API sends nothing: not Finance-owned");
+  assert.equal(mapAccountSummary(summary).capabilities.writesMovedToFinance, false, "an older API: writes stay where they are");
+  const closed = mapAccountSummary({ ...summary, capabilities: { ...caps, canRecordPayment: false, companyActive: true, writesMovedToFinance: true } });
+  assert.equal(closed.capabilities.writesMovedToFinance, true);
+  assert.equal(closed.capabilities.canRecordPayment, false);
+  for (const status of ["PENDING_APPROVAL", "APPROVED", "REJECTED", "WITHDRAWN", "PAID_OUT", "REVERSED"] as const) {
+    assert.ok(accountsRo.financeStatuses[status] && accountsTr.financeStatuses[status], status);
+  }
+  assert.ok(accountsRo.types.refund && accountsTr.types.refund && accountsRo.writesMovedToFinance && accountsTr.writesMovedToFinance && accountsRo.postedByFinance && accountsTr.postedByFinance);
+  const { fetchImpl, calls } = fakeFetch(() => ({ status: 200, body: { items: [{ code: "FIN-TX-000001", kind: "PAYMENT", status: "PENDING_APPROVAL", currencyCode: "RON", amount: "300.00", valueDate: "2026-11-01", submittedAt: "2026-11-01T09:00:00.000Z", decidedAt: null }] } }));
+  const api = createApi(API, fetchImpl);
+  const requests = await api.accountFinanceRequests(company.id);
+  assert.equal(calls[0].url.pathname, `/b2b/accounts/${company.id}/finance-requests`);
+  assert.equal(calls[0].method, "GET");
+  assert.deepEqual(requests.map((r) => [r.code, r.status, r.amount]), [["FIN-TX-000001", "PENDING_APPROVAL", "300.00"]]);
+});

@@ -528,3 +528,8 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
 .finance-panel .notice { display: grid; gap: 6px; }
 .finance-panel .notice p { margin: 0; overflow-wrap: anywhere; }
 .finance-reasons, .finance-decisions { margin: 0; padding-left: 18px; display: grid; gap: 4px; overflow-wrap: anywhere; }
+/* B2B 0.10.0: account read-only mode and Finance requests (API 2.68.0) */
+.notice-info { background: #eef4fb; border-color: #c9dbf0; color: #1f4f82; }
+.plain-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.plain-list li { overflow-wrap: anywhere; }
+.badge-warning { background: var(--warning-soft); color: var(--warning); }

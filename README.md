@@ -1,5 +1,7 @@
 # Arasya B2B
 
+Version 0.10.0 prepares the current account for Finance (Operations API 2.68.0): when the server records payments and corrections only in Finance (`accountsReadOnly`), the account screen is read-only and explains it; movements approved in Finance and refunds are never offered for reversal here; the Finance requests of the company are listed read-only; the new movement type "refund" is understood. On older APIs nothing changes.
+
 Version 0.9.1 fixes the order list and the company order history on Operations API 2.66.0: they showed a "Tip neales" type badge on every order although that API knows no order type. The badge now follows the same API feature as the order screen.
 
 Version 0.9.0 also shows the finance eligibility of an order (Operations API 2.67.0 `financeGate`): whether the server would allow finalization or the release to production, the reasons in Romanian and Turkish, the stored decisions and that the next step belongs to Finance. The panel is read-only, holds no amount and never decides; a refusal (409 `FINANCE_NOT_ELIGIBLE`, 409 `FINANCE_RELEASE_BLOCKED`, 503 `FINANCE_GATE_MISCONFIGURED`) is explained with the server's reason codes. With the gate off, which is the production setting, nothing changes for the user.

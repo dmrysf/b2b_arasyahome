@@ -6,6 +6,7 @@ import {
 import {
   ACCOUNT_PERMISSIONS, mapAccountActivity, mapAccountMutation, mapAccountOverview, mapAccountSummary, mapMovementDetail, mapMovementPage, mapOpenItems, mapStatement,
   type AccountCurrency, type EntryInput, type MovementQuery, type OverviewQuery, type PaymentInput, type ReversalInput, type StatementQuery, type AllocationInput,
+  mapFinanceRequests,
 } from "./accounts";
 import { ApiError } from "./errors";
 import { PRODUCTION_PERMISSIONS, mapProduction } from './production';
@@ -64,11 +65,12 @@ function mapAccess(value: unknown): B2bAccess {
   const permissions = Array.isArray(raw.permissions)
     ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS, ...ACCOUNT_PERMISSIONS, ...PRODUCTION_PERMISSIONS, ...PROJECT_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
     : [];
-  // API 2.67.0 announces its contract features. API 2.66.0 sends none, so B2B 0.9.0 may be deployed first and keeps working
+  // API 2.67.0 announces its contract features; from 2.68.0 each one follows its own server switch (accountsReadOnly: payments
+  // and corrections are recorded in Finance). API 2.66.0 sends none, so B2B 0.9.0 may be deployed first and keeps working
   // after an API rollback: without orderTypes it neither shows nor sends the order type.
   const features = Array.isArray(raw.features) ? raw.features : [];
   return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions,
-    features: { orderTypes: features.includes("orderTypes"), financeGate: features.includes("financeGate") } };
+    features: { orderTypes: features.includes("orderTypes"), financeGate: features.includes("financeGate"), accountsReadOnly: features.includes("accountsReadOnly") } };
 }
 
 export type CompanyQuery = { search?: string; status?: StatusFilter; country?: string; cursor?: string | null; limit?: number };
@@ -253,6 +255,8 @@ export function createApi(baseUrl: string, fetchImpl: Fetch = (...args) => fetch
       return mapMovementPage(await request(`/b2b/accounts/${segment(companyId)}/movements${params.size ? `?${params}` : ""}`));
     },
     accountMovement: async (companyId: string, movementId: string) => mapMovementDetail(await request(`/b2b/accounts/${segment(companyId)}/movements/${segment(movementId)}`)),
+    /** API 2.68.0 only. An older API answers 404, which the screen shows as "no Finance requests". */
+    accountFinanceRequests: async (companyId: string) => mapFinanceRequests(await request(`/b2b/accounts/${segment(companyId)}/finance-requests`)),
     accountOpenItems: async (companyId: string, currency: AccountCurrency) => mapOpenItems(await request(`/b2b/accounts/${segment(companyId)}/open-items?currency=${currency}`)),
     accountStatement: async (companyId: string, query: StatementQuery) => mapStatement(await request(`/b2b/accounts/${segment(companyId)}/statement?${statementParams(query)}`)),
     accountActivity: async (companyId: string, cursor?: string | null) => mapAccountActivity(await request(`/b2b/accounts/${segment(companyId)}/activity${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`)),

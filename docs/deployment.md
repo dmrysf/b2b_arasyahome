@@ -18,6 +18,8 @@ Repository variable `VITE_B2B_API_BASE_URL` must be `https://api.arasyahome.ro`.
 
 ## Prerequisites
 
+B2B 0.10.0 runs on Operations API 2.66.0, 2.67.0 and 2.68.0. **Deploy it before any Finance refund is approved on API 2.68.0**: B2B 0.9.x refuses an unknown movement type, so its account screen would fail for a company with a refund. On 2.68.0 the order type appears only when `ARASYA_B2B_ORDER_TYPES=enabled`, the finance panel only when the finance gate is in shadow or enforce, and the account becomes read-only only with `ARASYA_B2B_ACCOUNT_WRITES=finance_only`; each switch is independent.
+
 B2B 0.9.0 and 0.9.1 (order type, read-only finance panel) run on Operations API 2.66.0 and 2.67.0; 0.9.1 also hides the type badge of the order list and the company order history on 2.66.0. API 2.67.0 lists `features: ["orderTypes", "financeGate"]` on `GET /b2b/access`; without that list (API 2.66.0) B2B neither shows, sends nor requires the order type and hides the finance panel. B2B re-reads the access every minute and on tab focus, so the order type appears after the API upgrade and disappears after an API rollback without a reload. Deploy B2B 0.9.0 before API 2.67.0 (staff repository `docs/release-plan-b2b-finance.md`). Roll back to 0.8.2 only together with an API rollback: 0.8.2 cannot finalize under 2.67.0.
 
 B2B 0.4.1 (corrective, frontend only) replaces 0.4.0 on the same Operations API 2.10.0; roll back to 0.4.0 if needed.
@@ -64,5 +66,7 @@ DRY_RUN=1 /bin/bash scripts/cpanel-rollback-b2b.sh --previous   # validates and 
 ```
 
 Rollback re-validates every checksum and the provenance of the retained release, then records the change in `release-history.log`. B2B has no database; rolling it back never affects the API, Staff or the Dashboard.
+
+A rollback to a release before 0.10.0 also asks the active Operations API release (`$HOME/arasya-operations-api`, its own `bin/check-rollback.php`) how many refund movements the ledger holds, and is refused unless the answer is zero: B2B before 0.10.0 cannot show a refund. An active API before 2.68.0 has no refunds and needs no check. If the answer cannot be read (no active API release, the check fails, or the API does not report the count) the rollback is refused as well. The check also runs in dry-run.
 
 To withdraw B2B entirely without touching the API: remove the B2B grants in the Dashboard (root keeps access by definition), or roll the Operations API back to 2.6.0, which keeps working on the migration 008 catalog. Removing `https://b2b.arasyahome.ro` from `ARASYA_ALLOWED_ORIGINS` (from the timestamped configuration backup) blocks the browser application immediately.

@@ -39,6 +39,8 @@ export default defineConfig({
         ARASYA_ALLOWED_ORIGINS: `http://127.0.0.1:${webPort},http://127.0.0.1:4175`,
         ARASYA_LOGIN_USERNAME_LIMIT: "50",
         ARASYA_LOGIN_IP_LIMIT: "500",
+        // API 2.68.0: order types follow their own switch (production default off). Older APIs ignore the key.
+        ARASYA_B2B_ORDER_TYPES: "enabled",
       },
     },
     {
