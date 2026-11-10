@@ -4,11 +4,13 @@ import { useI18n } from '../i18n/context';
 /**
  * Finance eligibility of one order (Operations API 2.67.0). Read-only: it shows what the server decided or would
  * decide, the reasons, and who owns the next step. It holds no amount and never enables or disables an action.
+ * Shown only while the server announces the gate (`/b2b/access` feature `financeGate`, i.e. shadow or enforce): API 2.67.0+
+ * also sends the gate state of an order while the gate is off, and that data alone must not open the panel.
  */
-export function FinancePanel({ order }: { order: Order }) {
+export function FinancePanel({ order, enabled }: { order: Order; enabled: boolean }) {
   const { t } = useI18n(), f = t.orders.finance;
   const gate = order.financeGate;
-  if (!gate) return null;
+  if (!enabled || !gate) return null;
   const reason = (code: string) => Object.hasOwn(f.reasons, code) ? f.reasons[code] : code;
   const field = (name: string) => Object.hasOwn(f.fields, name) ? f.fields[name] : name;
   // A handoff made on this screen: the release preview of the loaded order no longer applies.

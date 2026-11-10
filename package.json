@@ -1,6 +1,6 @@
 {
   "name": "arasya-b2b",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "engines": {
@@ -15,7 +15,8 @@
     "test": "tsx --test tests/*.test.ts tests/*.test.tsx",
     "test:e2e:smoke": "playwright test -c playwright.smoke.config.ts",
     "test:e2e:real": "node e2e/prepare-real-api.mjs && VITE_B2B_API_BASE_URL=http://127.0.0.1:8789 vite build --mode e2e && playwright test -c playwright.real-api.config.ts",
-    "verify": "tsc --noEmit && eslint . --max-warnings=0 && tsx --test tests/*.test.ts tests/*.test.tsx && pnpm build && node scripts/verify-build.mjs && /bin/bash tests/b2b-deploy.sh"
+    "verify": "tsc --noEmit && eslint . --max-warnings=0 && tsx --test tests/*.test.ts tests/*.test.tsx && pnpm build && node scripts/verify-build.mjs && /bin/bash tests/b2b-deploy.sh",
+    "test:e2e:real-defaults": "playwright test -c playwright.real-defaults.config.ts"
   },
   "dependencies": {
     "react": "19.2.6",
