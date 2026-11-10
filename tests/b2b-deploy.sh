@@ -15,14 +15,14 @@ if grep -nE '<\(|>\(' "${scripts[@]}"; then fail "deploy scripts must not use pr
 if grep -nE '^[^#]*/dev/fd' "${scripts[@]}"; then fail "deploy scripts must not use /dev/fd"; fi
 
 create_release() {
-  local target="$1" sha="$2" marker="$3"
+  local target="$1" sha="$2" marker="$3" version="${4:-0.10.0}"
   mkdir -p "$target/dist" "$target/scripts"
   cp -R dist/. "$target/dist/"
   rm -f "$target/dist/release.json" "$target/dist/SHA256SUMS"
   printf 'window.__ARASYA_RELEASE_MARKER__=%q;\n' "$marker" > "$target/dist/assets/release-$marker.js"
   sed "s#</body>#<script type=\"module\" src=\"/assets/release-$marker.js\"></script></body>#" "$target/dist/index.html" > "$target/dist/index.next"
   mv "$target/dist/index.next" "$target/dist/index.html"
-  printf '{\n  "commit": "%s",\n  "version": "0.2.0",\n  "builtAt": "2026-10-04T00:00:00Z",\n  "preview": false\n}\n' "$sha" > "$target/dist/release.json"
+  printf '{\n  "commit": "%s",\n  "version": "%s",\n  "builtAt": "2026-10-04T00:00:00Z",\n  "preview": false\n}\n' "$sha" "$version" > "$target/dist/release.json"
   /bin/bash scripts/generate-sha256s.sh "$target/dist"
   /bin/bash scripts/validate-b2b-release.sh "$target/dist" "$sha" >/dev/null
   cp .cpanel.yml "$target/.cpanel.yml"
@@ -101,6 +101,41 @@ printf '\ncorrupt\n' >> "$storage/$sha_a/index.html"
 if HOME="$test_home" /bin/bash "$workspace/release-b/scripts/cpanel-rollback-b2b.sh" "$sha_a" >/dev/null 2>&1; then fail "rollback accepted a corrupt retained release"; fi
 [[ "$(active)" == "$sha_b" ]] || fail "corrupt rollback changed the pointer"
 
+# Refund guard: a rollback to B2B before 0.10.0 asks the active API release (its own check-rollback.php) how many refund
+# movements the ledger holds, and is refused unless the answer is a readable zero. Fake API roots stand in for production.
+sha_e="$(printf 'e%.0s' {1..40})"; sha_f="$(printf 'f%.0s' {1..40})"
+create_release "$workspace/release-e" "$sha_e" e 0.9.1
+create_release "$workspace/release-f" "$sha_f" f 0.10.0
+HOME="$test_home" /bin/bash "$workspace/release-e/scripts/cpanel-deploy.sh" >/dev/null
+HOME="$test_home" /bin/bash "$workspace/release-f/scripts/cpanel-deploy.sh" >/dev/null
+[[ "$(active)" == "$sha_f" ]] || fail "release F was not activated"
+fake_api() {
+  local root="$1" version="$2" api_sha; api_sha="$(printf '9%.0s' {1..40})"
+  mkdir -p "$root/releases/$api_sha/bin"; printf '%s\n' "$api_sha" > "$root/active-release"
+  printf '{"sourceCommit":"%s","version":"%s"}\n' "$api_sha" "$version" > "$root/releases/$api_sha/release.json"
+  # Stand-in for bin/check-rollback.php: answers from FAKE_REFUNDS ("none" = the field is missing, unset = the check fails).
+  printf '%s\n' '<?php $n = getenv("FAKE_REFUNDS"); if ($n === false) exit(1); $s = ["openFinanceCollections" => 0]; if ($n !== "none") $s["refundMovements"] = (int) $n; echo json_encode(["safe" => true, "state" => $s]);' > "$root/releases/$api_sha/bin/check-rollback.php"
+}
+api268="$workspace/api-268"; fake_api "$api268" 2.68.0
+api266="$workspace/api-266"; fake_api "$api266" 2.66.0
+refused_rollback() {
+  local label="$1" expect="$2"; shift 2; local output
+  if output="$(env HOME="$test_home" "$@" /bin/bash "$workspace/release-f/scripts/cpanel-rollback-b2b.sh" "$sha_e" 2>&1)"; then fail "refund guard accepted: $label"; fi
+  [[ "$output" == *"$expect"* ]] || fail "refund guard refused for another reason ($label): $output"
+  [[ "$(active)" == "$sha_f" ]] || fail "a refused rollback changed the pointer ($label)"
+}
+refused_rollback 'refund movements exist' 'registrul are 2 mișcări de rambursare' ARASYA_API_ROOT_PATH="$api268" FAKE_REFUNDS=2
+refused_rollback 'refund check fails' 'verificarea mișcărilor de rambursare nu a putut rula' ARASYA_API_ROOT_PATH="$api268"
+refused_rollback 'API does not report refunds' 'nu raportează mișcările de rambursare' ARASYA_API_ROOT_PATH="$api268" FAKE_REFUNDS=none
+refused_rollback 'no active API release' 'release-ul API activ nu poate fi citit' ARASYA_API_ROOT_PATH="$workspace/no-api"
+if HOME="$test_home" ARASYA_API_ROOT_PATH="$api268" FAKE_REFUNDS=2 DRY_RUN=1 /bin/bash "$workspace/release-f/scripts/cpanel-rollback-b2b.sh" "$sha_e" >/dev/null 2>&1; then fail "refund guard skipped in dry-run"; fi
+HOME="$test_home" ARASYA_API_ROOT_PATH="$api268" FAKE_REFUNDS=0 /bin/bash "$workspace/release-f/scripts/cpanel-rollback-b2b.sh" "$sha_e" >/dev/null || fail "refund guard refused with zero refund movements"
+[[ "$(active)" == "$sha_e" ]] || fail "rollback to 0.9.1 with zero refunds did not activate"
+HOME="$test_home" /bin/bash "$workspace/release-e/scripts/cpanel-rollback-b2b.sh" "$sha_f" >/dev/null || fail "rollback to 0.10.0 needed the refund guard"
+[[ "$(active)" == "$sha_f" ]] || fail "rollback to 0.10.0 did not activate"
+HOME="$test_home" ARASYA_API_ROOT_PATH="$api266" /bin/bash "$workspace/release-f/scripts/cpanel-rollback-b2b.sh" "$sha_e" >/dev/null || fail "refund guard refused although the active API predates refunds"
+[[ "$(active)" == "$sha_e" ]] || fail "rollback with API 2.66.0 did not activate"
+
 [[ -f "$live/.well-known/acme.txt" && -f "$live/cgi-bin/keep.txt" ]] || fail "preserved live directories changed"
 [[ "$(snapshot)" == "$before_roots" ]] || fail "deploy touched WordPress, Dashboard, Staff, API or config roots"
-printf 'PASS B2B releases deploy only to b2b.arasyahome.ro, verify checksums and provenance, survive partial failure, and roll back to verified releases.\n'
+printf 'PASS B2B releases deploy only to b2b.arasyahome.ro, verify checksums and provenance, survive partial failure, roll back to verified releases, and never roll back below 0.10.0 while refund movements exist.\n'
