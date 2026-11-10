@@ -136,11 +136,11 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   };
   let page;
   if (pathname === "/") page = <HomePage access={state.access} session={state.session} navigate={go} />;
-  else if (orderRoute?.kind === "list") page = <OrdersPage api={api} canView={orderCaps.canView} canCreate={orderCaps.canCreate && canView} navigate={go} companyId={selectedCompany} />;
+  else if (orderRoute?.kind === "list") page = <OrdersPage api={api} canView={orderCaps.canView} canCreate={orderCaps.canCreate && canView} navigate={go} companyId={selectedCompany} orderTypes={state.access.features.orderTypes} />;
   else if (orderRoute?.kind === "create") page = <OrderPage key="new-order" api={api} capabilities={orderCaps} canCompanyView={canView} companyId={selectedCompany} navigate={go} onDirty={onDirty} orderTypes={state.access.features.orderTypes} />;
   else if (orderRoute?.kind === "detail") page = orderCaps.canView
     ? <OrderPage key={orderRoute.id} api={api} id={orderRoute.id} capabilities={orderCaps} productionCapabilities={productionCaps} canCompanyView={canView} navigate={go} onDirty={onDirty} orderTypes={state.access.features.orderTypes} />
-    : <OrdersPage api={api} canView={false} canCreate={orderCaps.canCreate && canView} navigate={go} />;
+    : <OrdersPage api={api} canView={false} canCreate={orderCaps.canCreate && canView} navigate={go} orderTypes={state.access.features.orderTypes} />;
   else if (projectRoute?.kind === "list") page = <ProjectsPage api={api} canView={projectCaps.canView} canCreate={projectCaps.canCreate && canView} navigate={go} />;
   else if (projectRoute?.kind === "create") page = <ProjectCreatePage api={api} canCreate={projectCaps.canCreate} canCompanyView={canView} companyId={selectedCompany} navigate={go} />;
   else if (projectRoute?.kind === "detail") page = projectCaps.canView
@@ -153,7 +153,7 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   else if (route?.kind === "create" && canCreate) {
     page = <CompanyCreatePage api={api} canView={canView} navigate={go} onCreated={(id) => { setFlash({ path: companyPath(id), message: t.companies.success.created }); navigate(companyPath(id)); }} />;
   } else if (route?.kind === "detail" && canView) {
-    page = <CompanyDetailPage key={route.id} api={api} id={route.id} navigate={go} flash={flash?.path === pathname ? flash.message : null} orderCapabilities={orderCaps} canViewAccount={canViewAccounts} />;
+    page = <CompanyDetailPage key={route.id} api={api} id={route.id} navigate={go} flash={flash?.path === pathname ? flash.message : null} orderCapabilities={orderCaps} canViewAccount={canViewAccounts} orderTypes={state.access.features.orderTypes} />;
   } else if (route) {
     // The list explains what is missing when the identity may not view companies.
     page = <CompaniesPage api={api} canView={canView} canCreate={canCreate} navigate={go} />;
