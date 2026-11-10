@@ -114,7 +114,12 @@ test("quick wholesale stays project-free; a field project is built, repeated, pr
   const again = await admin.post(`${API}/b2b/projects/${projectId}/orders`, { headers: headers(), data: { treatmentIds: [room.room.openings[0].treatments[0].id], expectedRevision: revision } });
   expect((await again.json()).error.code).toBe("ORDER_ALREADY_CREATED_FROM_SCOPE");
 
-  // Classic lifecycle unchanged: finalize, explicit production, workshop sheet with location and no money.
+  // Classic lifecycle unchanged: finalize, explicit production, workshop sheet with location and no money. A converted draft
+  // has no inferred order type: the employee chooses it and saves before finalizing.
+  await expect(page.getByRole("button", { name: "Finalizează", exact: true })).toBeDisabled();
+  await page.getByRole("radio", { name: /Confecționare completă/ }).check();
+  await page.getByRole("button", { name: "Salvează ciorna", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Finalizează", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Finalizează", exact: true }).click();
   await page.getByRole("button", { name: "Confirmă finalizarea" }).click();
   await page.locator(".production-card").getByRole("button", { name: "Trimite în producție", exact: true }).click();

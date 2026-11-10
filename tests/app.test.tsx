@@ -12,7 +12,7 @@ import { HomePage } from "../src/pages/HomePage";
 import { B2B_VERSION } from "../src/version";
 import { accessPayload, ALL_COMPANY_PERMISSIONS, API, text } from "./support";
 
-const access = { ...accessPayload(), application: "b2b" as const, permissions: [...ALL_COMPANY_PERMISSIONS] };
+const access = { ...accessPayload(), application: "b2b" as const, permissions: [...ALL_COMPANY_PERMISSIONS], features: { orderTypes: true, financeGate: true } };
 const session = { employee: { employeeUuid: "11111111-1111-4111-8111-111111111111", displayName: "Elena Vânzări", username: "elena.vanzari", applications: ["b2b"], isRoot: false, mustChangePassword: false, authorizationVersion: 4 }, expiresAt: "2026-10-05T06:00:00+00:00" };
 
 const shell = (locale: Locale, isRoot = false, permissions: B2bAccess["permissions"] = access.permissions) => renderToStaticMarkup(

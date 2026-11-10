@@ -52,7 +52,8 @@ export function OrdersPage({ api, canView, canCreate, navigate, companyId }: {
         <div><a className="order-code mono" href={orderPath(i.id)} onClick={e => { e.preventDefault(); navigate(orderPath(i.id)); }}>{i.code}</a>
           <h3>{i.companyName}</h3><p className="muted">{dateTime(i.createdAt)} · {i.createdBy.displayName}</p>
           {i.customerReference && <p>{i.customerReference}</p>}</div>
-        <div><span className={`badge status-${i.status}`}>{o[i.status]}</span><dl className="order-list-totals">
+        <div><span className={`badge status-${i.status}`}>{o[i.status]}</span>{" "}
+          <span className={`badge order-type-badge${i.orderType ? "" : " order-type-missing"}`}>{i.orderType ? o.orderTypes[i.orderType] : o.noOrderType}</span><dl className="order-list-totals">
           {(["net", "vat", "gross"] as const).map(k => <div key={k}><dt>{o[k]}</dt><dd>{i.totals?.[k] ?? "—"} {i.currencyCode}</dd></div>)}
         </dl></div>
       </article>)}

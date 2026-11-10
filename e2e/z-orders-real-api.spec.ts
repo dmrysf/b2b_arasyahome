@@ -46,6 +46,7 @@ test("sales identity completes Classic Order lifecycle through real API without 
   await page.getByLabel("Preț unitar net 1").fill("10,00");
   await page.getByLabel("TVA % 1").fill("19");
   await expect(page.getByTestId("order-totals")).toContainText("160.65 RON");
+  await page.getByRole("radio", { name: /Confecționare completă/ }).check();
   await page.getByLabel("Cod produs 1", { exact: true }).press("Control+s");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^B2B-ORD-\d{6}$/);
   const orderUrl = page.url(), id = orderUrl.split("/").at(-1)!;
@@ -64,7 +65,7 @@ test("sales identity completes Classic Order lifecycle through real API without 
   await expect(page.getByRole("button", { name: "Salvează ciorna", exact: true })).toBeDisabled();
   detail = await load(); expect(detail.order.lines[0].id).toBe(originalLineId);
 
-  const fields: OrderFields = { companyId, currencyCode: detail.order.currencyCode, contactId: null, billingAddressId: null, deliveryAddressId: null,
+  const fields: OrderFields = { companyId, currencyCode: detail.order.currencyCode, orderType: detail.order.orderType, contactId: null, billingAddressId: null, deliveryAddressId: null,
     customerReference: "Concurrent reference", notes: null, productionNotes: null, lines: detail.order.lines };
   const concurrent = await admin.put(`${API}/b2b/orders/${id}`, { headers: headers(), data: { ...fields, expectedVersion: detail.order.version } });
   expect(concurrent.status()).toBe(200);

@@ -72,6 +72,12 @@ export function createTranslator(locale: Locale): Translator {
     stageLabel: (stage) => ({ ro: stage.label, tr: stagesTr[stage.id] })[locale],
     problem: (error) => {
       if (error instanceof ValidationProblem) return t.validation[error.key];
+      if (error instanceof ApiError && (error.code === "FINANCE_NOT_ELIGIBLE" || error.code === "FINANCE_RELEASE_BLOCKED")) {
+        // The server names its reasons as codes; the texts are ours. No amount is ever part of a refusal.
+        const reasons = error.details && typeof error.details === "object" ? (error.details as { reasons?: unknown }).reasons : undefined;
+        const labels = Array.isArray(reasons) ? reasons.filter((r): r is string => typeof r === "string").map(code => pick(t.orders.finance.reasons, code) ?? code) : [];
+        return [errors[error.code], ...labels].join(" ");
+      }
       if (error instanceof ApiError) return pick(errors, error.code) ?? (error.status === 403 ? t.errors.UNAUTHORIZED_ACTION : t.errors.fallback);
       return t.errors.fallback;
     },

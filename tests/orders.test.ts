@@ -78,3 +78,31 @@ test('the home page names the available modules in Romanian and Turkish', () => 
   assert.match(MESSAGES.tr.home.foundationBody, /Şirketler, Siparişler .* ve Cari hesaplar/);
   assert.doesNotMatch(MESSAGES.tr.home.foundationBody, /İlk kullanılabilir modül/);
 });
+
+test('the order type is explicit, strictly mapped and independent of the line kind', () => {
+ assert.equal(orderFields(emptyOrder('c')).orderType, null, 'no type is preselected');
+ assert.equal(orderFields({ ...emptyOrder('c'), orderType: 'FULL_ROLL_BAG', lines: [{ ...emptyLine(), kind: 'curtain' }] }).orderType, 'FULL_ROLL_BAG');
+ assert.equal(mapOrderDetail({ order, capabilities }).order.orderType, null, 'an older API without the field maps to no type');
+ assert.equal(mapOrderDetail({ order: { ...order, orderType: 'CUT_ONLY' }, capabilities }).order.orderType, 'CUT_ONLY');
+ assert.throws(() => mapOrderDetail({ order: { ...order, orderType: 'EXPRESS' }, capabilities }), /INVALID_RESPONSE/);
+ assert.throws(() => mapOrderDetail({ order: { ...order, financeDecision: { mode: 'on', outcome: 'ALLOWED', reasons: [] } }, capabilities }), /INVALID_RESPONSE/);
+ assert.deepEqual(mapOrderDetail({ order: { ...order, financeDecision: { mode: 'enforce', outcome: 'ALLOWED', reasons: [], profile: { riskColor: 'GREEN' } } }, capabilities }).order.financeDecision,
+  { mode: 'enforce', outcome: 'ALLOWED', reasons: [], phase: null, changedSinceFinalization: [], grandfathered: false }, 'an API 2.64 snapshot maps; its amounts are not mapped');
+ for (const m of [MESSAGES.ro.orders, MESSAGES.tr.orders]) {
+  assert.deepEqual(Object.keys(m.orderTypes), ['FULL_TAILORING', 'CUT_ONLY', 'FULL_ROLL_BAG']);
+ }
+ assert.equal(MESSAGES.ro.orders.orderTypes.CUT_ONLY, 'Doar debitare'); assert.equal(MESSAGES.tr.orders.orderTypes.FULL_ROLL_BAG, 'Tam Poşet / Rulo');
+ assert.equal(MESSAGES.ro.orders.orderTypeRoutes.FULL_ROLL_BAG, 'Pregătire material → Livrare');
+});
+
+test('zero-downtime release: B2B 0.9.0 reads the API features and omits the order type for an API before 2.67.0', async () => {
+ for (const [features, expected] of [[undefined, { orderTypes: false, financeGate: false }], [['orderTypes', 'financeGate', 'unknown'], { orderTypes: true, financeGate: true }], ['orderTypes', { orderTypes: false, financeGate: false }]] as const) {
+  const fake = fakeFetch(c => ({ body: c.url.pathname === '/auth/session' ? sessionPayload() : { ...accessPayload(), ...(features === undefined ? {} : { features }) } }));
+  const api = createApi(API, fake.fetchImpl); await api.getSession();
+  assert.deepEqual((await api.access()).features, expected);
+ }
+ const draft = { ...emptyOrder('c'), orderType: 'CUT_ONLY' as const };
+ assert.equal(orderFields(draft).orderType, 'CUT_ONLY');
+ assert.equal(orderFields(emptyOrder('c')).orderType, null, 'API 2.67.0: an unchosen type is sent as null');
+ assert.equal(Object.hasOwn(orderFields(draft, false), 'orderType'), false, 'API 2.66.0 refuses the unknown field, so it is never sent');
+});

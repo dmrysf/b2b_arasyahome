@@ -16,7 +16,7 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   const headers = () => ({ Origin: fixture.origins.admin, 'X-CSRF-Token': csrf, 'Idempotency-Key': crypto.randomUUID() });
   const companyResponse = await admin.post(API + '/b2b/companies', { headers: headers(), data: { legalName: 'Production Frozen Client', countryCode: 'RO', taxIdentifier: 'PROD-E2E-1' } });
   expect(companyResponse.status()).toBe(201); const companyId = (await companyResponse.json()).companyId as string;
-  const fields: OrderFields = { companyId, currencyCode: 'EUR', contactId: null, billingAddressId: null, deliveryAddressId: null,
+  const fields: OrderFields = { companyId, currencyCode: 'EUR', orderType: 'FULL_TAILORING', contactId: null, billingAddressId: null, deliveryAddressId: null,
     customerReference: null, notes: 'Commercial note', productionNotes: 'Frozen workshop note', lines: ['curtain','drapery','other'].map(kind => ({
       id: null, kind: kind as 'curtain' | 'drapery' | 'other', productCode: `PROD-${kind}`, productName: null, variant: 'Wave', color: 'White', width: '200', height: '260',
       quantity: 4, meters: '13.5', pricingUnit: 'meter', unitPriceNet: '10.00', discountPercent: '0', vatPercent: '19', notes: 'Line snapshot', productionNotes: 'Workshop line',
@@ -34,6 +34,8 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   await expect(card.getByRole('button', { name: 'Trimite în producție', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Finalizează', exact: true }).click(); await page.getByRole('button', { name: 'Confirmă finalizarea' }).click();
   await expect(card.getByRole('button', { name: 'Trimite în producție', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId('finance-preview')).toContainText('Verificarea financiară este oprită. Comanda nu este evaluată la trimiterea în producție.');
   detail = await (await admin.get(`${API}/b2b/orders/${id}`)).json(); const frozen = detail.order;
   expect((await (await admin.get(`${API}/b2b/orders/${id}/production`)).json()).production.submitted).toBe(false);
   const liveCompany = await (await admin.get(`${API}/b2b/companies/${companyId}`)).json();
@@ -50,7 +52,12 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   await expect(page.getByRole('button', { name: 'Anulează comanda' })).toHaveCount(0);
   expect((await (await admin.get(`${API}/b2b/accounts/${companyId}`)).json())).toEqual(account);
   const after = (await (await admin.get(`${API}/b2b/orders/${id}`)).json()).order;
-  expect({ ...after, productionSubmitted: frozen.productionSubmitted }).toEqual(frozen);
+  // The handoff changes nothing of the finalized commercial order. Its finance release decision is stored on the handoff
+  // (gate off: not evaluated), and the release preview no longer applies.
+  expect({ ...after, productionSubmitted: frozen.productionSubmitted, financeReleaseDecision: frozen.financeReleaseDecision, financeGate: frozen.financeGate }).toEqual(frozen);
+  expect(frozen.financeGate).toEqual({ configured: true, finalizationMode: 'off', releaseMode: 'off', preview: { phase: 'production_submission', mode: 'off', outcome: 'NOT_EVALUATED', reasons: [] } });
+  expect(frozen.financeDecision?.outcome).toBe('NOT_EVALUATED'); expect(frozen.financeReleaseDecision).toBeNull();
+  expect(after.financeReleaseDecision).toMatchObject({ phase: 'production_submission', mode: 'off', outcome: 'NOT_EVALUATED' }); expect(after.financeGate.preview).toBeNull();
   const operator = await request.newContext();
   const operatorLogin = await operator.post(API + '/auth/login', { headers: { Origin: fixture.origins.admin }, data: { username: fixture.operatorUser.username, password: fixture.operatorUser.temporaryPassword } });
   let operatorCsrf = (await operatorLogin.json()).csrfToken as string;

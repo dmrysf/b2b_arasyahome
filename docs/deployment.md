@@ -18,6 +18,8 @@ Repository variable `VITE_B2B_API_BASE_URL` must be `https://api.arasyahome.ro`.
 
 ## Prerequisites
 
+B2B 0.9.0 (order type, read-only finance panel) runs on Operations API 2.66.0 and 2.67.0. API 2.67.0 lists `features: ["orderTypes", "financeGate"]` on `GET /b2b/access`; without that list (API 2.66.0) B2B neither shows, sends nor requires the order type and hides the finance panel. B2B re-reads the access every minute and on tab focus, so the order type appears after the API upgrade and disappears after an API rollback without a reload. Deploy B2B 0.9.0 before API 2.67.0 (staff repository `docs/release-plan-b2b-finance.md`). Roll back to 0.8.2 only together with an API rollback: 0.8.2 cannot finalize under 2.67.0.
+
 B2B 0.4.1 (corrective, frontend only) replaces 0.4.0 on the same Operations API 2.10.0; roll back to 0.4.0 if needed.
 
 B2B 0.4.0 requires Operations API 2.10.0 with migration 011 and Dashboard 0.5.3 permission labels. Back up the production database and configuration, deploy the verified API, run `php bin/migrate.php` and `php bin/readiness.php` (confirm `b2b_account_permissions`), deploy Dashboard, let root grant the `b2b.accounts.*` permissions to roles, then deploy B2B. Roll back B2B to 0.3.1 before the API to 2.9.1; keep migration 011 and every ledger row (orders finalized or cancelled under 2.9.1 post no ledger rows).

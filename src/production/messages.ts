@@ -13,6 +13,13 @@ export const productionRo = {
   documentStates: { none: 'Negenerat · se generează REVIZIA 1 la prima tipărire', active: 'Document activ', stale: 'Document blocat: datele de producție s-au schimbat', revoked: 'Document anulat' } as Record<string, string>,
   revision: (n: number) => `REVIZIA ${n}`,
   documentHint: 'Retipărirea păstrează aceeași revizie și același cod QR.',
+  orderType: 'Tip comandă', route: 'Traseu de producție', nextStage: 'Etapa următoare', stage2: 'Etapa 2 (Pregătire material)',
+  stage2Done: 'Finalizată', stage2Pending: 'Nefinalizată', deliveryState: 'Livrare',
+  deliveryStates: { IN_PRODUCTION: 'În producție', READY_FOR_LIVRARE: 'Gata pentru Livrare', RECEIVED_BY_LIVRARE: 'Preluată de Livrare', HANDED_OVER: 'Predată de Livrare' } as Record<string, string>,
+  notApplicable: 'Etapele 3–13 nu se aplică acestui tip de comandă (nu sunt lucrări restante).',
+  handoverNote: '„Predată de Livrare” este finalizarea etapei 14 în Staff. Nu confirmă livrarea la client și nu creează AWB.',
+  routeConfirm: 'Traseul este stabilit de server din tipul comenzii înghețat la finalizare.',
+  progressRoute: (current: number, total: number) => `Pasul ${current} din ${total} ai traseului`,
 };
 export const productionTr: typeof productionRo = {
   title: 'Üretim', submit: 'Üretime gönder', question: 'Sipariş üretime gönderilsin mi?', confirm: 'Gönderimi onayla', cancel: 'Geri',
@@ -27,6 +34,13 @@ export const productionTr: typeof productionRo = {
   documentStates: { none: 'Oluşturulmadı · ilk yazdırmada REVİZYON 1 oluşturulur', active: 'Aktif belge', stale: 'Belge bloke: üretim verileri değişti', revoked: 'Belge iptal edildi' },
   revision: (n) => `REVİZYON ${n}`,
   documentHint: 'Yeniden yazdırma aynı revizyonu ve aynı QR kodunu korur.',
+  orderType: 'Sipariş tipi', route: 'Üretim rotası', nextStage: 'Sonraki aşama', stage2: '2. aşama (Malzeme Hazırlama)',
+  stage2Done: 'Tamamlandı', stage2Pending: 'Tamamlanmadı', deliveryState: 'Teslimat (Livrare)',
+  deliveryStates: { IN_PRODUCTION: 'Üretimde', READY_FOR_LIVRARE: 'Teslimata hazır', RECEIVED_BY_LIVRARE: 'Teslimat birimi teslim aldı', HANDED_OVER: 'Teslimat birimi teslim etti' },
+  notApplicable: '3–13. aşamalar bu sipariş tipinde uygulanmaz (bekleyen iş değildir).',
+  handoverNote: '“Teslimat birimi teslim etti”, Staff’taki 14. aşamanın tamamlanmasıdır. Müşteriye teslimatı onaylamaz ve AWB oluşturmaz.',
+  routeConfirm: 'Rota, kesinleştirmede dondurulan sipariş tipinden sunucu tarafından belirlenir.',
+  progressRoute: (current, total) => `Rotanın ${total} adımından ${current}.`,
 };
 /** API-owned stage IDs; one Turkish presentation dictionary, never a copied workflow state. */
 export const stagesTr: Record<StageId, string> = {

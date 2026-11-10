@@ -76,8 +76,22 @@ export function ProductionCard({ api, order, capabilities, disabled, onSubmitted
     <p className="badge">{submitted ? production?.submitted && production.completedAt ? p.completed : p.submitted : p.notSubmitted}</p>
     {capabilities.canView && production?.submitted && <>
       <h3>{stageLabel(production.stage)}</h3>
-      <p>{p.progress(production.stage.ordinal, production.totalStages)}</p>
-      <progress aria-label={p.title} max={production.totalStages} value={production.completedAt ? 14 : production.stage.ordinal} />
+      {production.route?.shortRoute ? <>
+        <p>{p.progressRoute(production.route.stages.indexOf(production.stage.id) + 1, production.route.stages.length)}</p>
+        <progress aria-label={p.title} max={production.route.stages.length} value={production.completedAt ? production.route.stages.length : production.route.stages.indexOf(production.stage.id) + 1} />
+      </> : <>
+        <p>{p.progress(production.stage.ordinal, production.totalStages)}</p>
+        <progress aria-label={p.title} max={production.totalStages} value={production.completedAt ? 14 : production.stage.ordinal} />
+      </>}
+      {production.route && <dl className="production-details production-route" data-testid="production-route">
+        <div><dt>{p.orderType}</dt><dd>{production.route.orderType ? t.orders.orderTypes[production.route.orderType] : t.orders.noOrderType}</dd></div>
+        <div><dt>{p.route}</dt><dd>{production.route.orderType ? t.orders.orderTypeRoutes[production.route.orderType] : t.orders.orderTypeRoutes.FULL_TAILORING}</dd></div>
+        <div><dt>{p.nextStage}</dt><dd>{production.route.nextStage ? stageLabel(production.route.nextStage) : '—'}</dd></div>
+        <div><dt>{p.stage2}</dt><dd>{production.route.stage2Completed ? p.stage2Done : p.stage2Pending}</dd></div>
+        <div><dt>{p.deliveryState}</dt><dd data-testid="delivery-state">{p.deliveryStates[production.route.delivery]}</dd></div>
+      </dl>}
+      {production.route?.shortRoute && <p className="muted">{p.notApplicable}</p>}
+      {production.route && <p className="muted">{p.handoverNote}</p>}
       <dl className="production-details">
         <div><dt>{p.sentAt}</dt><dd>{dateTime(production.submittedAt)}</dd></div>
         <div><dt>{p.changedAt}</dt><dd>{dateTime(production.stageChangedAt)}</dd></div>
@@ -102,6 +116,8 @@ function ProductionConfirmation({ order, busy, error, onClose, onConfirm }: { or
   return <dialog ref={dialog} className="order-dialog" aria-labelledby="production-confirm-title" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
     <h2 id="production-confirm-title">{p.question}</h2>
     <p>{order.code} · {String(order.companySnapshot.legalName ?? '')} · {t.orders.lineCount(order.lines.length)}</p>
+    {order.orderType && <p data-testid="production-confirm-type">{t.orders.orderType}: <strong>{t.orders.orderTypes[order.orderType]}</strong> · {t.orders.orderTypeRoutes[order.orderType]}</p>}
+    <p className="muted">{p.routeConfirm}</p>
     <ul className="production-confirm-lines" aria-label={t.orders.lines}>{order.lines.map((line, index) => <li key={line.id ?? index}>
       <strong>{line.productCode}</strong> · {t.orders[line.kind]} · {t.orders.quantity}: {line.quantity}
       {line.meters !== null && <> · {t.orders.meters}: {line.meters}</>}

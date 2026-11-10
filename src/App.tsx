@@ -137,9 +137,9 @@ export function App({ apiBaseUrl, api: injected }: { apiBaseUrl: string; api?: B
   let page;
   if (pathname === "/") page = <HomePage access={state.access} session={state.session} navigate={go} />;
   else if (orderRoute?.kind === "list") page = <OrdersPage api={api} canView={orderCaps.canView} canCreate={orderCaps.canCreate && canView} navigate={go} companyId={selectedCompany} />;
-  else if (orderRoute?.kind === "create") page = <OrderPage key="new-order" api={api} capabilities={orderCaps} canCompanyView={canView} companyId={selectedCompany} navigate={go} onDirty={onDirty} />;
+  else if (orderRoute?.kind === "create") page = <OrderPage key="new-order" api={api} capabilities={orderCaps} canCompanyView={canView} companyId={selectedCompany} navigate={go} onDirty={onDirty} orderTypes={state.access.features.orderTypes} />;
   else if (orderRoute?.kind === "detail") page = orderCaps.canView
-    ? <OrderPage key={orderRoute.id} api={api} id={orderRoute.id} capabilities={orderCaps} productionCapabilities={productionCaps} canCompanyView={canView} navigate={go} onDirty={onDirty} />
+    ? <OrderPage key={orderRoute.id} api={api} id={orderRoute.id} capabilities={orderCaps} productionCapabilities={productionCaps} canCompanyView={canView} navigate={go} onDirty={onDirty} orderTypes={state.access.features.orderTypes} />
     : <OrdersPage api={api} canView={false} canCreate={orderCaps.canCreate && canView} navigate={go} />;
   else if (projectRoute?.kind === "list") page = <ProjectsPage api={api} canView={projectCaps.canView} canCreate={projectCaps.canCreate && canView} navigate={go} />;
   else if (projectRoute?.kind === "create") page = <ProjectCreatePage api={api} canCreate={projectCaps.canCreate} canCompanyView={canView} companyId={selectedCompany} navigate={go} />;

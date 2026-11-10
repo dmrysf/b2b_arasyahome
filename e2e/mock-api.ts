@@ -6,7 +6,8 @@ export const API = "https://api.arasyahome.ro";
 
 export const ALL_COMPANY_PERMISSIONS = ["b2b.companies.view", "b2b.companies.create", "b2b.companies.update", "b2b.companies.manage_status"];
 
-export type MockOptions = { applications?: string[]; mustChangePassword?: boolean; loggedIn?: boolean; permissions?: string[] };
+/** `features: null` reproduces Operations API 2.66.0, which sends no feature list and knows no order type. */
+export type MockOptions = { applications?: string[]; mustChangePassword?: boolean; loggedIn?: boolean; permissions?: string[]; features?: string[] | null };
 
 /**
  * An in-memory double of the Central IAM and B2B Companies endpoints B2B uses (Operations API 2.8.0 shapes). It answers through
@@ -32,6 +33,7 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
   const session = () => ({ employee: employee(), expiresAt: "2026-10-05T06:00:00+00:00", csrfToken: "csrf-smoke" });
   const companies = createCompanyStore(state.permissions);
   const orders = createOrderStore(state.permissions, companies);
+  orders.api.legacy = options.features === null;
   const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   const fail = (route: Route, code: string, status: number) => json(route, { error: { code, message: "English server text", requestId: "r" } }, status);
 
@@ -55,7 +57,8 @@ export async function mockApi(page: Page, options: MockOptions = {}) {
     if (method === "GET" && path === "/b2b/access") {
       if (state.mustChangePassword) return fail(route, "PASSWORD_CHANGE_REQUIRED", 403);
       if (state.accessRemoved || !state.applications.includes("b2b")) return fail(route, "APPLICATION_ACCESS_DENIED", 403);
-      return json(route, { application: "b2b", employee: { displayName: "Elena Vânzări", username: "elena.vanzari", isRoot: false }, authorizationVersion: state.authorizationVersion, permissions: state.permissions });
+      return json(route, { application: "b2b", employee: { displayName: "Elena Vânzări", username: "elena.vanzari", isRoot: false }, authorizationVersion: state.authorizationVersion, permissions: state.permissions,
+        ...(options.features === null ? {} : { features: options.features ?? ["orderTypes", "financeGate"] }) });
     }
     if (path === "/b2b/companies" || path.startsWith("/b2b/companies/")) {
       if (state.accessRemoved) return fail(route, "APPLICATION_ACCESS_DENIED", 403);
