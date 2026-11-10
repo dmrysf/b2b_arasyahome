@@ -50,6 +50,39 @@ test('classic order saves, finalizes, duplicates and shows exact server totals i
  expect(api.state.requests).toContain('POST /b2b/orders');
  expect(await page.evaluate(()=>[sessionStorage.length,Object.keys(localStorage)])).toEqual([0,['arasya.b2b.locale']]);
 });
+test('finance eligibility: the reasons, the refusal and the next owner are shown in RO and TR, also at 360 px',async({page})=>{
+ const api=await mockApi(page,{loggedIn:true,permissions:perms});const companyId=api.companies.seed({legalName:'Synthetic Blocked SRL',taxIdentifier:'1234'});
+ const reasons=['IDENTITY_NOT_VERIFIED','NO_APPROVED_LIMIT'];
+ api.orders.finance.gate={configured:true,finalizationMode:'enforce',releaseMode:'enforce',preview:{phase:'finalization',mode:'enforce',outcome:'BLOCKED',reasons}};
+ api.orders.finance.refuse=reasons;
+ const order=api.orders.seed(orderFields({...emptyOrder(companyId),orderType:'CUT_ONLY',lines:[{...emptyLine(),productCode:'P1',quantity:'1',unitPriceNet:'10.00',vatPercent:'19'}]}));
+ await page.goto(`/comenzi/${order.id}`);
+ const panel=page.getByTestId('finance-panel');
+ await expect(panel.getByRole('heading',{name:'Eligibilitate financiară'})).toBeVisible();
+ await expect(page.getByTestId('finance-preview')).toHaveAttribute('data-outcome','BLOCKED');
+ await expect(panel).toContainText('Comanda nu poate fi finalizată pe credit.');
+ await expect(panel).toContainText('Identitatea companiei nu este verificată.');
+ await expect(panel).toContainText('Compania nu are o limită de cumpărare aprobată.');
+ await expect(panel).toContainText('Pasul următor aparține departamentului Financiar');
+ await expect(panel).not.toContainText('IDENTITY_NOT_VERIFIED');
+ // The server refuses; the screen explains the refusal and the order stays a draft.
+ await page.getByRole('button',{name:'Finalizează',exact:true}).click();await page.getByRole('button',{name:'Confirmă finalizarea'}).click();
+ await expect(page.getByRole('alert').filter({hasText:'Comanda nu poate fi finalizată pe credit. Nu a fost modificat nimic.'})).toContainText('Compania nu are o limită de cumpărare aprobată.');
+ expect(api.orders.orders.find(o=>o.id===order.id)!.status).toBe('draft');
+ for(const width of [1440,1024,768,390,360]) {
+  await page.setViewportSize({width,height:800});
+  await expect(panel).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),`no horizontal overflow at ${width}px`).toBe(true);
+ }
+ await page.getByRole('button',{name:'TR — Türkçe'}).click();
+ await expect(panel.getByRole('heading',{name:'Finans uygunluğu'})).toBeVisible();
+ await expect(panel).toContainText('Sipariş vadeli olarak kesinleştirilemez.');
+ await expect(panel).toContainText('Şirket kimliği doğrulanmadı.');
+ // An invalid server configuration is said plainly.
+ api.orders.finance.gate={configured:false,finalizationMode:null,releaseMode:null,preview:{phase:null,mode:null,outcome:'CONFIGURATION_INVALID',reasons:[]}};
+ await page.reload();
+ await expect(page.getByTestId('finance-invalid')).toContainText('Finans kontrolü yapılandırması geçersiz');
+});
 test('draft retry keeps one key, freezes editors and preserves input after version conflict',async({page})=>{
  const api=await mockApi(page,{loggedIn:true,permissions:perms});const companyId=api.companies.seed({legalName:'Client SRL',taxIdentifier:'1234'});
  await page.goto(`/comenzi/noua?companyId=${companyId}`);await page.getByRole('button',{name:'Adaugă linie'}).click();await page.getByLabel('Cod produs 1',{exact:true}).fill('LOCAL');

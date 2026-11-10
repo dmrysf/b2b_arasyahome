@@ -106,6 +106,9 @@ export function useOrderEditor(api: B2bApi, id: string | undefined, companyId: s
       if (!mounted.current) return;
       setError(e);
       if (e instanceof ApiError) {
+        // The server answered: close the modal confirmation so the refusal (for example FINANCE_NOT_ELIGIBLE) is
+        // readable and reachable instead of sitting under an inert backdrop. A network failure keeps it for a retry.
+        setConfirm(null);
         setFields(e.fields);
         if (["ORDER_CHANGED", "ORDER_FINALIZED", "ORDER_CANCELLED"].includes(e.code)) setConflict(true);
       }

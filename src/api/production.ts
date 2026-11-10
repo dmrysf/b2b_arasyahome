@@ -7,7 +7,7 @@ export type ProductionCapabilities = { canView: boolean; canSubmit: boolean };
 export const STAGES = ['waiting', 'material-preparation', 'workshop-receiving', 'labeling', 'material-straightening', 'bottom-hem', 'side-hem', 'ironing', 'height', 'header-tape', 'sewing-finishing', 'quality-control', 'packing', 'delivery'] as const;
 export type StageId = typeof STAGES[number];
 export type DeliveryState = 'IN_PRODUCTION' | 'READY_FOR_LIVRARE' | 'RECEIVED_BY_LIVRARE' | 'HANDED_OVER';
-/** Route decided by the server from the frozen order type (API 2.64.0). Absent from an older API: no route details. */
+/** Route decided by the server from the frozen order type (API 2.67.0). Absent from an older API: no route details. */
 export type ProductionRoute = { orderType: OrderType | null; stages: StageId[]; notApplicable: StageId[]; shortRoute: boolean;
   nextStage: { id: StageId; label: string } | null; stage2Completed: boolean; delivery: DeliveryState };
 export type Production = { submitted: false; orderCode: string } | {

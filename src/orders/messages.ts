@@ -1,12 +1,12 @@
 import { plural } from '../i18n/plural';
+import { financeRo, financeTr } from './financeMessages';
 export const ordersRo = {
  orderType:'Tip comandă',orderTypeHint:'Alegeți explicit. Tipul stabilește traseul de producție și este separat de tipul produsului.',
  orderTypeRequired:'Alegeți tipul comenzii înainte de finalizare.',noOrderType:'Tip neales',
  orderTypes:{FULL_TAILORING:'Confecționare completă',CUT_ONLY:'Doar debitare',FULL_ROLL_BAG:'Sac întreg / rolă întreagă'} as Record<'FULL_TAILORING'|'CUT_ONLY'|'FULL_ROLL_BAG',string>,
  orderTypeRoutes:{FULL_TAILORING:'Toate etapele de producție aplicabile (1–14)',CUT_ONLY:'Pregătire material → Livrare',FULL_ROLL_BAG:'Pregătire material → Livrare'} as Record<'FULL_TAILORING'|'CUT_ONLY'|'FULL_ROLL_BAG',string>,
  orderTypeWork:{FULL_TAILORING:'Comandă normală de fabricație.',CUT_ONLY:'Etapa 2 taie materialul; etapele 3–13 nu se aplică.',FULL_ROLL_BAG:'Etapa 2 verifică și pregătește sacul sau rola întreagă; fără tăiere, etapele 3–13 nu se aplică.'} as Record<'FULL_TAILORING'|'CUT_ONLY'|'FULL_ROLL_BAG',string>,
- financeDecision:'Decizie financiară la finalizare',financeModes:{off:'Verificare financiară oprită',shadow:'Verificare financiară în observare',enforce:'Verificare financiară activă'} as Record<string,string>,
- financeOutcomes:{NOT_EVALUATED:'Neevaluată',ALLOWED:'Permisă',WOULD_BLOCK:'Ar fi fost blocată (doar observare)',BLOCKED:'Blocată'} as Record<string,string>,
+ finance:financeRo,
  lineCount:(n:number)=>plural('ro',n,{one:'{n} produs',few:'{n} produse',other:'{n} de produse'}),
  customerReference:'Referință client',productionNotes:'Instrucțiuni pentru producție',cancelled:'Anulată',cancelOrder:'Anulează comanda',
  confirmCancel:'Confirmă anularea',cancelQuestion:'Anulați această comandă?',cancelHint:'Comanda și istoricul sunt păstrate. Anularea este definitivă.',
@@ -24,8 +24,7 @@ export const ordersTr:typeof ordersRo = {
  orderTypes:{FULL_TAILORING:'Tam Dikim',CUT_ONLY:'Yalnız Kesim',FULL_ROLL_BAG:'Tam Poşet / Rulo'},
  orderTypeRoutes:{FULL_TAILORING:'Uygulanan tüm üretim aşamaları (1–14)',CUT_ONLY:'Malzeme Hazırlama → Teslimat (Livrare)',FULL_ROLL_BAG:'Malzeme Hazırlama → Teslimat (Livrare)'},
  orderTypeWork:{FULL_TAILORING:'Normal fabrika üretim siparişi.',CUT_ONLY:'2. aşama kumaşı keser; 3–13. aşamalar uygulanmaz.',FULL_ROLL_BAG:'2. aşama tam poşeti veya ruloyu kontrol edip hazırlar; kesim yok, 3–13. aşamalar uygulanmaz.'},
- financeDecision:'Kesinleştirmedeki finans kararı',financeModes:{off:'Finans kontrolü kapalı',shadow:'Finans kontrolü gözlem modunda',enforce:'Finans kontrolü etkin'},
- financeOutcomes:{NOT_EVALUATED:'Değerlendirilmedi',ALLOWED:'İzin verildi',WOULD_BLOCK:'Engellenirdi (yalnız gözlem)',BLOCKED:'Engellendi'},
+ finance:financeTr,
  lineCount:(n:number)=>plural('tr',n,{other:'{n} ürün'}),
  customerReference:'Müşteri referansı',productionNotes:'Üretim talimatları',cancelled:'İptal edildi',cancelOrder:'Siparişi iptal et',
  confirmCancel:'İptali onayla',cancelQuestion:'Siparişi iptal ediyor musunuz?',cancelHint:'Sipariş ve geçmişi korunur. İptal geri alınamaz.',

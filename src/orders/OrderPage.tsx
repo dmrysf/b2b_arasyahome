@@ -8,6 +8,7 @@ import { FieldError, OrderLineEditor } from "./OrderLineEditor";
 import { addressLabel, orderPath, snapshotOption, type OrderDraft } from "./model";
 import { useOrderEditor } from "./useOrderEditor";
 import { ProductionCard } from '../production/ProductionCard';
+import { FinancePanel } from './FinancePanel';
 import type { ProductionCapabilities } from '../api/production';
 
 export function OrderPage({ api, id, companyId, capabilities, productionCapabilities = { canView: false, canSubmit: false }, canCompanyView, navigate, onDirty }: {
@@ -151,13 +152,12 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
       {order!.finalizedAt && <p>{o.finalized}: {dateTime(order!.finalizedAt)} · {order!.finalizedBy?.displayName}</p>}
       {order!.cancelledAt && <p>{o.cancelled}: {dateTime(order!.cancelledAt)} · {order!.updatedBy.displayName}</p>}
       {order!.orderType && <p data-testid="frozen-order-type">{o.orderType}: <strong>{o.orderTypes[order!.orderType]}</strong> · {o.orderTypeRoutes[order!.orderType]}</p>}
-      {order!.financeDecision && <p data-testid="finance-decision">{o.financeDecision}: {o.financeModes[order!.financeDecision.mode]} · {o.financeOutcomes[order!.financeDecision.outcome]}
-        {order!.financeDecision.reasons.length > 0 && <> · <span className="mono">{order!.financeDecision.reasons.join(", ")}</span></>}</p>}
       {[["contactSnapshot", o.contact], ["billingAddressSnapshot", o.billing], ["deliveryAddressSnapshot", o.delivery]].map(([key, label]) => {
         const snapshot = order![key as "contactSnapshot" | "billingAddressSnapshot" | "deliveryAddressSnapshot"];
         return snapshot ? <div key={key}><h3>{label}</h3><p>{Object.entries(snapshot).filter(([key, v]) => key !== "id" && key !== "type" && typeof v === "string").map(([, v]) => String(v)).join(" · ")}</p></div> : null;
       })}
     </section>}
+    {order && !e.dirty && <FinancePanel order={order} />}
     <section className="card order-footer" data-testid="order-totals">
       <div aria-live="polite">{e.calculation?.totals ? <dl className="order-summary">{(["net", "vat", "gross"] as const).map(k => <div key={k}><dt>{o[k]}</dt><dd>{e.calculation!.totals![k]} <small>{e.draft.currencyCode}</small></dd></div>)}</dl>
         : <p>{e.calculationError !== null ? problem(e.calculationError) : e.calculation ? o.incomplete : o.pending}</p>}</div>

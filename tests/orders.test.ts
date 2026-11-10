@@ -86,7 +86,8 @@ test('the order type is explicit, strictly mapped and independent of the line ki
  assert.equal(mapOrderDetail({ order: { ...order, orderType: 'CUT_ONLY' }, capabilities }).order.orderType, 'CUT_ONLY');
  assert.throws(() => mapOrderDetail({ order: { ...order, orderType: 'EXPRESS' }, capabilities }), /INVALID_RESPONSE/);
  assert.throws(() => mapOrderDetail({ order: { ...order, financeDecision: { mode: 'on', outcome: 'ALLOWED', reasons: [] } }, capabilities }), /INVALID_RESPONSE/);
- assert.deepEqual(mapOrderDetail({ order: { ...order, financeDecision: { mode: 'enforce', outcome: 'ALLOWED', reasons: [], profile: { riskColor: 'GREEN' } } }, capabilities }).order.financeDecision, { mode: 'enforce', outcome: 'ALLOWED', reasons: [] });
+ assert.deepEqual(mapOrderDetail({ order: { ...order, financeDecision: { mode: 'enforce', outcome: 'ALLOWED', reasons: [], profile: { riskColor: 'GREEN' } } }, capabilities }).order.financeDecision,
+  { mode: 'enforce', outcome: 'ALLOWED', reasons: [], phase: null, changedSinceFinalization: [], grandfathered: false }, 'an API 2.64 snapshot maps; its amounts are not mapped');
  for (const m of [MESSAGES.ro.orders, MESSAGES.tr.orders]) {
   assert.deepEqual(Object.keys(m.orderTypes), ['FULL_TAILORING', 'CUT_ONLY', 'FULL_ROLL_BAG']);
  }

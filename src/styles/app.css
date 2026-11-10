@@ -510,7 +510,7 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
 }
 @media (max-width: 420px) { .type-grid { grid-template-columns: minmax(0, 1fr); } .project-grid .span-2 { grid-column: auto; } }
 
-/* B2B order type (API 2.64.0): one explicit choice, three cards that wrap on narrow screens. */
+/* B2B order type (API 2.67.0): one explicit choice, three cards that wrap on narrow screens. */
 .order-type { border: 0; padding: 0; margin: 1rem 0 0; min-width: 0; }
 .order-type legend { font-weight: 600; padding: 0; margin-bottom: 0.25rem; }
 .order-type-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
@@ -522,3 +522,9 @@ input[type="checkbox"] { width: 16px; height: 16px; padding: 0; flex: none; acce
 .order-type-missing { background: #fff4e5; color: #8a4b00; }
 .production-route { margin-top: 0.75rem; }
 @media (max-width: 760px) { .order-type-options { grid-template-columns: minmax(0, 1fr); } }
+
+/* Finance eligibility panel (API 2.67.0): read-only, wraps on narrow screens. */
+.finance-panel { display: grid; gap: 10px; }
+.finance-panel .notice { display: grid; gap: 6px; }
+.finance-panel .notice p { margin: 0; overflow-wrap: anywhere; }
+.finance-reasons, .finance-decisions { margin: 0; padding-left: 18px; display: grid; gap: 4px; overflow-wrap: anywhere; }

@@ -3,11 +3,24 @@ import { ApiError } from "./errors";
 export const ORDER_PERMISSIONS = ["b2b.orders.view", "b2b.orders.create", "b2b.orders.update", "b2b.orders.manage_status"] as const;
 export type OrderPermission = typeof ORDER_PERMISSIONS[number];
 export type Currency = "RON" | "EUR";
-/** The three B2B order types (API 2.64.0). The server derives the production route from the frozen type. */
+/** The three B2B order types (API 2.67.0). The server derives the production route from the frozen type. */
 export const ORDER_TYPES = ["FULL_TAILORING", "CUT_ONLY", "FULL_ROLL_BAG"] as const;
 export type OrderType = typeof ORDER_TYPES[number];
-/** Finance decision snapshot written at finalization (FinanceGate); informational, the server decided it. */
-export type FinanceDecision = { mode: "off" | "shadow" | "enforce"; outcome: "NOT_EVALUATED" | "ALLOWED" | "WOULD_BLOCK" | "BLOCKED"; reasons: string[] };
+export const FINANCE_MODES = ["off", "shadow", "enforce"] as const;
+export type FinanceMode = typeof FINANCE_MODES[number];
+export const FINANCE_OUTCOMES = ["NOT_EVALUATED", "ALLOWED", "ALLOWED_BY_CEO_EXCEPTION", "WOULD_BLOCK", "BLOCKED"] as const;
+export type FinanceOutcome = typeof FINANCE_OUTCOMES[number];
+export const FINANCE_PHASES = ["finalization", "production_submission"] as const;
+export type FinancePhase = typeof FINANCE_PHASES[number];
+/**
+ * Finance decision snapshot (FinanceGate, API 2.67.0), written by the server at finalization or at production submission.
+ * Informational: the browser never decides and never sends a balance or a limit. Amounts of the snapshot are not mapped.
+ */
+export type FinanceDecision = { mode: FinanceMode; outcome: FinanceOutcome; reasons: string[]; phase: FinancePhase | null;
+  changedSinceFinalization: string[]; grandfathered: boolean };
+/** Advisory preview of the next decision of this order. The binding decision is taken again when the action runs. */
+export type FinancePreview = { phase: FinancePhase | null; mode: FinanceMode | null; outcome: FinanceOutcome | "CONFIGURATION_INVALID"; reasons: string[] };
+export type FinanceGateState = { configured: boolean; finalizationMode: FinanceMode | null; releaseMode: FinanceMode | null; preview: FinancePreview | null };
 export type CommercialStatus = "draft" | "finalized" | "cancelled";
 export type LineInput = {
   id: string | null; productCode: string; productName: string | null; variant: string | null; color: string | null;
@@ -32,6 +45,10 @@ export type OrderOrigin = { projectId: string; projectCode: string; projectName:
 export type Order = OrderFields & {
   productionSubmitted?: boolean;
   financeDecision?: FinanceDecision | null;
+  /** The release decision stored with the production handoff, or null. */
+  financeReleaseDecision?: FinanceDecision | null;
+  /** Gate state and preview; null with an API before 2.67.0. */
+  financeGate?: FinanceGateState | null;
   origin: OrderOrigin | null;
   id: string; code: string; status: CommercialStatus; version: number; sourceOrderId: string | null;
   companySnapshot: Record<string, unknown>; contactSnapshot: Record<string, unknown> | null;
@@ -62,11 +79,21 @@ const currency = (v: unknown) => choice(v, ["RON", "EUR"] as const);
 const status = (v: unknown) => choice(v, ["draft", "finalized", "cancelled"] as const);
 /** Absent (an older API) or null: no type chosen yet. */
 const orderType = (v: unknown): OrderType | null => v === undefined || v === null ? null : choice(v, ORDER_TYPES);
+const stringList = (v: unknown): string[] => v === undefined ? [] : array(v).map(str);
 function financeDecision(v: unknown): FinanceDecision | null {
   if (v === undefined || v === null) return null;
   const r = obj(v);
-  return { mode: choice(r.mode, ["off", "shadow", "enforce"] as const), outcome: choice(r.outcome, ["NOT_EVALUATED", "ALLOWED", "WOULD_BLOCK", "BLOCKED"] as const),
-    reasons: r.reasons === undefined ? [] : array(r.reasons).map(str) };
+  return { mode: choice(r.mode, FINANCE_MODES), outcome: choice(r.outcome, FINANCE_OUTCOMES), reasons: stringList(r.reasons),
+    phase: r.phase === undefined || r.phase === null ? null : choice(r.phase, FINANCE_PHASES),
+    changedSinceFinalization: stringList(r.changedSinceFinalization), grandfathered: r.grandfathered === undefined ? false : bool(r.grandfathered) };
+}
+function financeGate(v: unknown): FinanceGateState | null {
+  if (v === undefined || v === null) return null;
+  const r = obj(v), mode = (m: unknown) => m === null ? null : choice(m, FINANCE_MODES);
+  const preview = r.preview === null ? null : obj(r.preview);
+  return { configured: bool(r.configured), finalizationMode: mode(r.finalizationMode), releaseMode: mode(r.releaseMode),
+    preview: preview === null ? null : { phase: preview.phase === null ? null : choice(preview.phase, FINANCE_PHASES), mode: mode(preview.mode),
+      outcome: choice(preview.outcome, [...FINANCE_OUTCOMES, "CONFIGURATION_INVALID"] as const), reasons: stringList(preview.reasons) } };
 }
 function decimal(v: unknown, precision: number, fixed = false): string {
   const s = str(v);
@@ -119,6 +146,7 @@ export function mapOrderDetail(v: unknown): OrderDetail {
     customerReference: nullable(r.customerReference), notes: nullable(r.notes), productionNotes: nullable(r.productionNotes), lines,
     id: str(r.id), code: str(r.code), status: status(r.status), version: integer(r.version), sourceOrderId: nullable(r.sourceOrderId),
     productionSubmitted: r.productionSubmitted === undefined ? false : bool(r.productionSubmitted), origin: mapOrigin(r.origin), financeDecision: financeDecision(r.financeDecision),
+    financeReleaseDecision: financeDecision(r.financeReleaseDecision), financeGate: financeGate(r.financeGate),
     companySnapshot: obj(r.companySnapshot), contactSnapshot: snapshot(r.contactSnapshot),
     billingAddressSnapshot: snapshot(r.billingAddressSnapshot), deliveryAddressSnapshot: snapshot(r.deliveryAddressSnapshot),
     createdAt: str(r.createdAt), updatedAt: str(r.updatedAt), finalizedAt: nullable(r.finalizedAt), cancelledAt: nullable(r.cancelledAt),
