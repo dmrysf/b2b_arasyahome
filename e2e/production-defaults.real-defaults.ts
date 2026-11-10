@@ -46,8 +46,18 @@ test("production defaults: no finance panel, no order type, no route details; st
   await expect(page.getByText("Eligibilitate financiară")).toHaveCount(0);
   await expect(page.getByTestId("order-type-badge")).toHaveCount(0);
   await page.getByRole("button", { name: "Finalizează", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("Finalizați această comandă? Datele comerciale devin definitive.");
+  await expect(page.getByTestId("confirm-order-type")).toHaveCount(0);
   await page.getByRole("button", { name: "Confirmă finalizarea" }).click();
+  // Finalized read-only details: no order type.
+  await expect(page.getByTestId("frozen-order-type")).toHaveCount(0);
   await card.getByRole("button", { name: "Trimite în producție", exact: true }).click();
+  // Submission dialog: neither the type nor the sentence that the route follows the frozen order type (B2B 0.10.2).
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Trimiteți comanda în producție?");
+  await expect(page.getByTestId("production-confirm-type")).toHaveCount(0);
+  await expect(page.getByTestId("production-confirm-route")).toHaveCount(0);
+  await expect(dialog).not.toContainText("Traseul este stabilit de server");
   await page.getByRole("button", { name: "Confirmă trimiterea" }).click();
   await expect(card).toContainText("Trimisă în producție");
   await expect(card).toContainText("Etapa 1 din 14");
