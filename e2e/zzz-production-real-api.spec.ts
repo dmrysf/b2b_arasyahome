@@ -35,7 +35,8 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   await page.getByRole('button', { name: 'Finalizează', exact: true }).click(); await page.getByRole('button', { name: 'Confirmă finalizarea' }).click();
   await expect(card.getByRole('button', { name: 'Trimite în producție', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByTestId('finance-preview')).toContainText('Verificarea financiară este oprită. Comanda nu este evaluată la trimiterea în producție.');
+  // Gate off: the server sends the gate state of the order, but announces no financeGate feature, so there is no panel.
+  await expect(page.getByTestId('finance-panel')).toHaveCount(0);
   detail = await (await admin.get(`${API}/b2b/orders/${id}`)).json(); const frozen = detail.order;
   expect((await (await admin.get(`${API}/b2b/orders/${id}/production`)).json()).production.submitted).toBe(false);
   const liveCompany = await (await admin.get(`${API}/b2b/companies/${companyId}`)).json();
@@ -49,6 +50,8 @@ test('explicit frozen handoff, canonical Staff progress, RO/TR and responsive re
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Confirmă trimiterea' }).dblclick();
   await expect(card).toContainText('Trimisă în producție'); await expect(card).toContainText('Etapa 1 din 14');
+  // Order types on: the frozen type and its route are shown on the card.
+  await expect(page.getByTestId('production-route')).toContainText('Confecționare completă');
   await expect(page.getByRole('button', { name: 'Anulează comanda' })).toHaveCount(0);
   expect((await (await admin.get(`${API}/b2b/accounts/${companyId}`)).json())).toEqual(account);
   const after = (await (await admin.get(`${API}/b2b/orders/${id}`)).json()).order;

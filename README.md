@@ -1,5 +1,7 @@
 # Arasya B2B
 
+Version 0.10.1 follows the server switches on Operations API 2.68.0: the finance eligibility panel of an order appears only while `/b2b/access` announces `financeGate` (gate in shadow or enforce), and the order type and route details of the production card only while it announces `orderTypes`. With the production defaults (both off) the order screen looks as on API 2.66.0; the stage and the 14-stage progress are always shown.
+
 Version 0.10.0 prepares the current account for Finance (Operations API 2.68.0): when the server records payments and corrections only in Finance (`accountsReadOnly`), the account screen is read-only and explains it; movements approved in Finance and refunds are never offered for reversal here; the Finance requests of the company are listed read-only; the new movement type "refund" is understood. On older APIs nothing changes.
 
 Version 0.9.1 fixes the order list and the company order history on Operations API 2.66.0: they showed a "Tip neales" type badge on every order although that API knows no order type. The badge now follows the same API feature as the order screen.

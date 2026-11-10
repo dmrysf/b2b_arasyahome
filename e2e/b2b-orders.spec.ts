@@ -247,3 +247,20 @@ test('zero-downtime release: B2B 0.9.x on Operations API 2.66.0 neither shows no
  expect(bodies.length).toBeGreaterThan(0);
  expect(bodies.some(b=>Object.hasOwn(b as object,'orderType'))).toBe(false);
 });
+test('feature matrix: the finance panel follows financeGate and the order type follows orderTypes, never the order data alone',async({page})=>{
+ const gateOff={configured:true,finalizationMode:'off',releaseMode:'off',preview:{phase:'finalization',mode:'off',outcome:'NOT_EVALUATED',reasons:[]}};
+ for (const [features,panel,types] of [[[],false,false],[['financeGate'],true,false],[['orderTypes'],false,true],[['orderTypes','financeGate'],true,true]] as const) {
+  const api=await mockApi(page,{loggedIn:true,permissions:perms,features:[...features]});const companyId=api.companies.seed({legalName:'Synthetic Matrix SRL',taxIdentifier:'4321'});
+  // API 2.68.0 sends the gate state of every draft, also while the gate is off.
+  api.orders.finance.gate=gateOff;
+  const order=api.orders.seed(orderFields({...emptyOrder(companyId),lines:[{...emptyLine(),productCode:'P1',quantity:'1',unitPriceNet:'10.00',vatPercent:'19'}]}));
+  await page.goto(`/comenzi/${order.id}`);
+  await expect(page.getByRole('heading',{name:order.code})).toBeVisible();
+  const label=JSON.stringify(features);
+  await expect(page.getByTestId('finance-panel'),label).toHaveCount(panel?1:0);
+  await expect(page.locator('fieldset.order-type'),label).toHaveCount(types?1:0);
+  await expect(page.getByTestId('order-type-badge'),label).toHaveCount(types?1:0);
+  if(!panel) await expect(page.getByText('Eligibilitate financiară'),label).toHaveCount(0);
+  await page.unrouteAll({behavior:'ignoreErrors'});
+ }
+});

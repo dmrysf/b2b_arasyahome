@@ -128,6 +128,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run B2B against the real Operations API
         run: pnpm test:e2e:real
+      - name: Run B2B against the real Operations API with its production default switches (order types and finance gate off)
+        run: pnpm test:e2e:real-defaults
 
   verified-release:
     # Publishing to deploy requires every gate above; a skipped or failed gate blocks the release.

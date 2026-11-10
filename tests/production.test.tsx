@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createApi } from '../src/api/client';
 import { mapProduction, PRODUCTION_PERMISSIONS, STAGES } from '../src/api/production';
-import { ProductionCard } from '../src/production/ProductionCard';
+import { ProductionCard, ProductionRouteDetails } from '../src/production/ProductionCard';
 import { I18nProvider } from '../src/i18n/context';
 import { stagesTr } from '../src/production/messages';
 import { fakeFetch, sessionPayload, API, accessPayload } from './support';
@@ -54,7 +54,7 @@ test('production CTA requires finalized order plus narrow submit permission; nev
   const order = { id, code: production.orderCode, status: 'finalized', version: 3, lines: [], companySnapshot: { legalName: 'Client' } } as unknown as Order;
   const api = createApi(API);
   const render = (status: Order['status'], canSubmit: boolean, submitted = false, locale: 'ro' | 'tr' = 'ro') => renderToStaticMarkup(
-    <I18nProvider locale={locale}><ProductionCard api={api} order={{ ...order, status, productionSubmitted: submitted }} capabilities={{ canView: false, canSubmit }} disabled={false} onSubmitted={() => undefined} /></I18nProvider>);
+    <I18nProvider locale={locale}><ProductionCard api={api} order={{ ...order, status, productionSubmitted: submitted }} capabilities={{ canView: false, canSubmit }} orderTypes={true} disabled={false} onSubmitted={() => undefined} /></I18nProvider>);
   assert.match(render('finalized', true), />Trimite în producție</);
   assert.match(render('finalized', true, false, 'tr'), />Üretime gönder</);
   for (const html of [render('draft', true), render('cancelled', true), render('finalized', false), render('finalized', true, true)]) assert.doesNotMatch(html, />Trimite în producție</);
@@ -72,6 +72,20 @@ test('the route of a typed order comes from the server: CUT_ONLY and FULL_ROLL_B
     assert.throws(() => mapProduction({ production: { ...short, ...delta } }), /INVALID_RESPONSE/);
   }
   const order = { id, code: 'B2B-ORD-000001', status: 'finalized', version: 2, productionSubmitted: true, orderType: 'CUT_ONLY', lines: [], companySnapshot: { legalName: 'X' } } as unknown as Order;
-  const html = renderToStaticMarkup(<I18nProvider locale="ro"><ProductionCard api={createApi(API, fakeFetch(() => ({ body: {} })).fetchImpl)} order={order} capabilities={{ canView: false, canSubmit: false }} disabled={false} onSubmitted={() => undefined} /></I18nProvider>);
+  const html = renderToStaticMarkup(<I18nProvider locale="ro"><ProductionCard api={createApi(API, fakeFetch(() => ({ body: {} })).fetchImpl)} order={order} capabilities={{ canView: false, canSubmit: false }} orderTypes={true} disabled={false} onSubmitted={() => undefined} /></I18nProvider>);
   assert.equal(html, '', 'no production capability renders nothing');
+});
+
+test('order type and route details follow the orderTypes feature, never the route data alone (API 2.68.0 sends a route with order types off)', () => {
+  const route = mapProduction({ production: { ...production, route: { stages: [...STAGES], notApplicable: [], shortRoute: false }, orderType: null,
+    nextStage: { id: 'material-preparation', label: 'Pregătire material' }, stage2Completed: false, delivery: 'IN_PRODUCTION' } }) as { route: Parameters<typeof ProductionRouteDetails>[0]['route'] };
+  assert.ok(route.route, 'the 2.68.0 route maps');
+  const html = (orderTypes: boolean, r = route.route, locale: 'ro' | 'tr' = 'ro') => renderToStaticMarkup(<I18nProvider locale={locale}><ProductionRouteDetails route={r} orderTypes={orderTypes} /></I18nProvider>);
+  for (const locale of ['ro', 'tr'] as const) {
+    assert.equal(html(false, route.route, locale), '', `orderTypes off (${locale}): no type, no route, no handover note`);
+    assert.match(html(true, route.route, locale), /data-testid="production-route"/, `orderTypes on (${locale}): details shown`);
+  }
+  assert.match(html(true), /Tip neales/); assert.doesNotMatch(html(false), /Tip neales|Traseu/);
+  assert.equal(html(true, null), '', 'API 2.66.0: no route, nothing shown even with the feature');
+  assert.equal(html(false, null), '');
 });

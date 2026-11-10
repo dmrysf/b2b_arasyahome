@@ -1,13 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { B2bApi } from '../api/client';
 import type { Order } from '../api/orders';
-import type { Production, ProductionCapabilities } from '../api/production';
+import type { Production, ProductionCapabilities, ProductionRoute } from '../api/production';
 import { Intent } from '../companies/idempotency';
 import { useI18n } from '../i18n/context';
 import { saveFile } from '../accounts/model';
 
-export function ProductionCard({ api, order, capabilities, disabled, onSubmitted }: {
-  api: B2bApi; order: Order; capabilities: ProductionCapabilities; disabled: boolean; onSubmitted: () => void;
+/**
+ * Order type and route details of a submitted order (API 2.67.0+). Shown only while the server announces order types
+ * (`/b2b/access` feature `orderTypes`): API 2.68.0 sends a route for every order even with order types off, and that
+ * data alone must not show "order type not chosen". The stage and the 14-stage progress stay in the card either way.
+ */
+export function ProductionRouteDetails({ route, orderTypes }: { route: ProductionRoute | null; orderTypes: boolean }) {
+  const { t, stageLabel } = useI18n(), p = t.production;
+  if (!orderTypes || !route) return null;
+  return <>
+    <dl className="production-details production-route" data-testid="production-route">
+      <div><dt>{p.orderType}</dt><dd>{route.orderType ? t.orders.orderTypes[route.orderType] : t.orders.noOrderType}</dd></div>
+      <div><dt>{p.route}</dt><dd>{route.orderType ? t.orders.orderTypeRoutes[route.orderType] : t.orders.orderTypeRoutes.FULL_TAILORING}</dd></div>
+      <div><dt>{p.nextStage}</dt><dd>{route.nextStage ? stageLabel(route.nextStage) : '—'}</dd></div>
+      <div><dt>{p.stage2}</dt><dd>{route.stage2Completed ? p.stage2Done : p.stage2Pending}</dd></div>
+      <div><dt>{p.deliveryState}</dt><dd data-testid="delivery-state">{p.deliveryStates[route.delivery]}</dd></div>
+    </dl>
+    {route.shortRoute && <p className="muted">{p.notApplicable}</p>}
+    <p className="muted">{p.handoverNote}</p>
+  </>;
+}
+
+export function ProductionCard({ api, order, capabilities, orderTypes, disabled, onSubmitted }: {
+  api: B2bApi; order: Order; capabilities: ProductionCapabilities; orderTypes: boolean; disabled: boolean; onSubmitted: () => void;
 }) {
   const { t, stageLabel, problem, dateTime } = useI18n(), p = t.production;
   const [sheetBusy, setSheetBusy] = useState(false);
@@ -83,15 +104,7 @@ export function ProductionCard({ api, order, capabilities, disabled, onSubmitted
         <p>{p.progress(production.stage.ordinal, production.totalStages)}</p>
         <progress aria-label={p.title} max={production.totalStages} value={production.completedAt ? 14 : production.stage.ordinal} />
       </>}
-      {production.route && <dl className="production-details production-route" data-testid="production-route">
-        <div><dt>{p.orderType}</dt><dd>{production.route.orderType ? t.orders.orderTypes[production.route.orderType] : t.orders.noOrderType}</dd></div>
-        <div><dt>{p.route}</dt><dd>{production.route.orderType ? t.orders.orderTypeRoutes[production.route.orderType] : t.orders.orderTypeRoutes.FULL_TAILORING}</dd></div>
-        <div><dt>{p.nextStage}</dt><dd>{production.route.nextStage ? stageLabel(production.route.nextStage) : '—'}</dd></div>
-        <div><dt>{p.stage2}</dt><dd>{production.route.stage2Completed ? p.stage2Done : p.stage2Pending}</dd></div>
-        <div><dt>{p.deliveryState}</dt><dd data-testid="delivery-state">{p.deliveryStates[production.route.delivery]}</dd></div>
-      </dl>}
-      {production.route?.shortRoute && <p className="muted">{p.notApplicable}</p>}
-      {production.route && <p className="muted">{p.handoverNote}</p>}
+      <ProductionRouteDetails route={production.route} orderTypes={orderTypes} />
       <dl className="production-details">
         <div><dt>{p.sentAt}</dt><dd>{dateTime(production.submittedAt)}</dd></div>
         <div><dt>{p.changedAt}</dt><dd>{dateTime(production.stageChangedAt)}</dd></div>

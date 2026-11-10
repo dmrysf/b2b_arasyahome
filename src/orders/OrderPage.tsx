@@ -11,10 +11,12 @@ import { ProductionCard } from '../production/ProductionCard';
 import { FinancePanel } from './FinancePanel';
 import type { ProductionCapabilities } from '../api/production';
 
-export function OrderPage({ api, id, companyId, capabilities, productionCapabilities = { canView: false, canSubmit: false }, canCompanyView, navigate, onDirty, orderTypes = true }: {
+export function OrderPage({ api, id, companyId, capabilities, productionCapabilities = { canView: false, canSubmit: false }, canCompanyView, navigate, onDirty, orderTypes = true, financeGate = true }: {
   api: B2bApi; id?: string; companyId?: string; capabilities: OrderCapabilities; canCompanyView: boolean;
   /** False on an API before 2.67.0: no order type is shown, sent or required (zero-downtime release order). */
   orderTypes?: boolean;
+  /** `/b2b/access` feature `financeGate`: the finance panel exists only while the server announces the gate. */
+  financeGate?: boolean;
   productionCapabilities?: ProductionCapabilities;
   navigate: (path: string) => void; onDirty: (dirty: boolean) => void;
 }) {
@@ -94,7 +96,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
         {t.projects.origin(order.origin.projectCode)} · {order.origin.projectName}</a>}
       {order?.sourceOrderId && <a href={orderPath(order.sourceOrderId)} onClick={event => { event.preventDefault(); navigate(orderPath(order.sourceOrderId!)); }}>{o.source}</a>}
     </header>
-    {order && <ProductionCard key={order.id} api={api} order={order} capabilities={productionCapabilities} disabled={e.busy || e.dirty || e.conflict} onSubmitted={e.productionSubmitted} />}
+    {order && <ProductionCard key={order.id} api={api} order={order} capabilities={productionCapabilities} orderTypes={orderTypes} disabled={e.busy || e.dirty || e.conflict} onSubmitted={e.productionSubmitted} />}
     {e.notice && <p className="notice notice-success order-success" role="status">{o[e.notice]}</p>}
     {e.error !== null && <p className="notice notice-error" role="alert">{problem(e.error)}</p>}
     {e.conflict && <section className="card notice notice-warning">
@@ -159,7 +161,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
         return snapshot ? <div key={key}><h3>{label}</h3><p>{Object.entries(snapshot).filter(([key, v]) => key !== "id" && key !== "type" && typeof v === "string").map(([, v]) => String(v)).join(" · ")}</p></div> : null;
       })}
     </section>}
-    {order && !e.dirty && <FinancePanel order={order} />}
+    {order && !e.dirty && <FinancePanel order={order} enabled={financeGate} />}
     <section className="card order-footer" data-testid="order-totals">
       <div aria-live="polite">{e.calculation?.totals ? <dl className="order-summary">{(["net", "vat", "gross"] as const).map(k => <div key={k}><dt>{o[k]}</dt><dd>{e.calculation!.totals![k]} <small>{e.draft.currencyCode}</small></dd></div>)}</dl>
         : <p>{e.calculationError !== null ? problem(e.calculationError) : e.calculation ? o.incomplete : o.pending}</p>}</div>

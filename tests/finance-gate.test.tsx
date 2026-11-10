@@ -19,7 +19,7 @@ const base = { companyId: 'c1', currencyCode: 'RON', orderType: 'CUT_ONLY', cont
 const capabilities = { canView: true, canCreate: true, canUpdate: true, canFinalize: true, canCancel: true };
 const map = (extra: Record<string, unknown>): Order => mapOrderDetail({ order: { ...base, ...extra }, capabilities }).order;
 const gate = (preview: unknown, modes: [string | null, string | null] = ['enforce', 'enforce'], configured = true) => ({ configured, finalizationMode: modes[0], releaseMode: modes[1], preview });
-const render = (order: Order, locale: 'ro' | 'tr' = 'ro') => renderToStaticMarkup(<I18nProvider locale={locale}><FinancePanel order={order} /></I18nProvider>);
+const render = (order: Order, locale: 'ro' | 'tr' = 'ro', enabled = true) => renderToStaticMarkup(<I18nProvider locale={locale}><FinancePanel order={order} enabled={enabled} /></I18nProvider>);
 const REASONS = ['IDENTITY_NOT_VERIFIED', 'ACCOUNT_NOT_RECONCILED', 'CURRENCY_ISSUE_OPEN', 'RISK_NOT_ASSIGNED', 'RISK_RED', 'NO_APPROVED_LIMIT', 'LIMIT_EXPIRED', 'LIMIT_SUSPENDED',
   'LIMIT_NOT_YET_EFFECTIVE', 'LIMIT_ZERO', 'LIMIT_CURRENCY_MISMATCH', 'CREDIT_REVIEW_REQUIRED', 'NO_AVAILABLE_CREDIT', 'ORDER_CURRENCY_MISMATCH', 'CREDIT_LIMIT_EXCEEDED'];
 
@@ -108,4 +108,14 @@ test('a finance refusal is explained with its reasons in both languages, without
   assert.equal(ro.problem(new ApiError('FINANCE_NOT_ELIGIBLE', 409, undefined, { reasons: 'RISK_RED' })), 'Comanda nu poate fi finalizată pe credit. Nu a fost modificat nimic.', 'malformed details add nothing');
   assert.match(ro.problem(new ApiError('FINANCE_GATE_MISCONFIGURED', 503)), /Configurația verificării financiare este invalidă/);
   assert.match(tr.problem(new ApiError('FINANCE_GATE_MISCONFIGURED', 503)), /Finans kontrolü yapılandırması geçersiz/);
+});
+
+test('the panel follows the financeGate feature, never the gate data alone (API 2.68.0 sends the gate state while it is off)', () => {
+  const off = map({ financeGate: gate({ phase: 'finalization', mode: 'off', outcome: 'NOT_EVALUATED', reasons: [] }, ['off', 'off']) });
+  assert.equal(render(off, 'ro', false), '', 'gate off (feature absent): no panel although the order carries a gate state');
+  assert.equal(render(off, 'tr', false), '');
+  const blocked = map({ financeGate: gate({ phase: 'finalization', mode: 'enforce', outcome: 'BLOCKED', reasons: ['RISK_RED'] }) });
+  assert.equal(render(blocked, 'ro', false), '', 'even a blocking preview stays hidden without the feature');
+  assert.match(render(blocked, 'ro', true), /data-testid="finance-panel"/, 'feature on: the panel is unchanged');
+  assert.equal(render(map({}), 'ro', true), '', 'API 2.66.0: no gate state, no panel');
 });
