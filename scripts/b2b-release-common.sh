@@ -22,6 +22,33 @@ b2b_release_commit() {
     || b2b_fail "release.json commit este invalid."
 }
 
+b2b_release_version() {
+  php -r '$r=json_decode(file_get_contents($argv[1]), true, flags: JSON_THROW_ON_ERROR); $v=$r["version"] ?? ""; if (!is_string($v) || preg_match("/^\d+\.\d+\.\d+$/", $v) !== 1) exit(2); echo $v;' "$1/release.json" \
+    || b2b_fail "release.json version este invalid."
+}
+b2b_version_lt() { php -r 'exit(version_compare($argv[1], $argv[2], "<") ? 0 : 1);' "$1" "$2"; }
+
+# B2B before 0.10.0 does not know the "refund" movement type (Finance refunds, Operations API 2.68.0): its current-account
+# screen fails for every company with a refund. A rollback to such a release is refused while the ledger holds a refund
+# movement. The count comes from the active API release's own rollback check (state.refundMovements); refunds exist only
+# from API 2.68.0, so an older active API needs no check. Without a readable answer the rollback is refused.
+b2b_refund_guard() {
+  local target_version="$1" api_root active api_release api_version state refunds
+  api_root="${ARASYA_API_ROOT_PATH:-$HOME/arasya-operations-api}"
+  [[ -f "$api_root/active-release" ]] || b2b_fail "Rollback la B2B $target_version refuzat: release-ul API activ nu poate fi citit."
+  active="$(tr -d '[:space:]' < "$api_root/active-release")"
+  [[ "$active" =~ ^[0-9a-f]{40}$ ]] || b2b_fail "Rollback la B2B $target_version refuzat: pointer-ul API activ este invalid."
+  api_release="$api_root/releases/$active"
+  api_version="$(php -r '$r=json_decode(file_get_contents($argv[1]), true, flags: JSON_THROW_ON_ERROR); $v=$r["version"] ?? ""; if (!is_string($v) || preg_match("/^\d+\.\d+\.\d+$/", $v) !== 1) exit(2); echo $v;' "$api_release/release.json" 2>/dev/null)" \
+    || b2b_fail "Rollback la B2B $target_version refuzat: versiunea API activă nu poate fi citită."
+  if b2b_version_lt "$api_version" "2.68.0"; then return 0; fi
+  state="$(php "$api_release/bin/check-rollback.php" "$api_version" 2>/dev/null)" \
+    || b2b_fail "Rollback la B2B $target_version refuzat: verificarea mișcărilor de rambursare nu a putut rula."
+  refunds="$(php -r '$j=json_decode($argv[1], true); $n=$j["state"]["refundMovements"] ?? null; if (!is_int($n) || $n < 0) exit(2); echo $n;' "$state")" \
+    || b2b_fail "Rollback la B2B $target_version refuzat: API-ul activ nu raportează mișcările de rambursare."
+  [[ "$refunds" == "0" ]] || b2b_fail "Rollback la B2B $target_version refuzat: registrul are $refunds mișcări de rambursare, pe care B2B înainte de 0.10.0 nu le poate afișa."
+}
+
 b2b_read_pointer() {
   local pointer="$1" value
   [[ -f "$pointer" && ! -L "$pointer" ]] || b2b_fail "Pointer-ul release nu este fișier regulat."

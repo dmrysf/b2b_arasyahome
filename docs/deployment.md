@@ -67,4 +67,6 @@ DRY_RUN=1 /bin/bash scripts/cpanel-rollback-b2b.sh --previous   # validates and 
 
 Rollback re-validates every checksum and the provenance of the retained release, then records the change in `release-history.log`. B2B has no database; rolling it back never affects the API, Staff or the Dashboard.
 
+A rollback to a release before 0.10.0 also asks the active Operations API release (`$HOME/arasya-operations-api`, its own `bin/check-rollback.php`) how many refund movements the ledger holds, and is refused unless the answer is zero: B2B before 0.10.0 cannot show a refund. An active API before 2.68.0 has no refunds and needs no check. If the answer cannot be read (no active API release, the check fails, or the API does not report the count) the rollback is refused as well. The check also runs in dry-run.
+
 To withdraw B2B entirely without touching the API: remove the B2B grants in the Dashboard (root keeps access by definition), or roll the Operations API back to 2.6.0, which keeps working on the migration 008 catalog. Removing `https://b2b.arasyahome.ro` from `ARASYA_ALLOWED_ORIGINS` (from the timestamped configuration backup) blocks the browser application immediately.
