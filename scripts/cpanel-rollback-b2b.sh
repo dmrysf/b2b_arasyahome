@@ -17,6 +17,8 @@ retained="$storage_path/$target"; resolved_storage="$(cd -- "$storage_path" && p
 resolved_retained="$(cd -- "$retained" 2>/dev/null && pwd -P)" || b2b_fail "Release-ul de rollback nu există."
 [[ "${resolved_retained%/*}" == "$resolved_storage" && "${resolved_retained##*/}" == "$target" ]] || b2b_fail "Release-ul de rollback a ieșit din stocarea controlată."
 /bin/bash "$repository_root/scripts/validate-b2b-release.sh" "$resolved_retained" "$target" >/dev/null || b2b_fail "Release-ul de rollback $target nu trece validarea."
+target_version="$(b2b_release_version "$resolved_retained")"
+if b2b_version_lt "$target_version" "0.10.0"; then b2b_refund_guard "$target_version"; fi
 if [[ "${DRY_RUN:-0}" == "1" ]]; then b2b_log "Ar activa commit B2B: $target (activ acum: $current)"; exit 0; fi
 b2b_activate_release "$resolved_retained" "$deploy_path" "$storage_path" "$target" rollback
 b2b_log "Activat commit B2B: $target"
