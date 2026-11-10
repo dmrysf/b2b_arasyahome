@@ -47,6 +47,12 @@ test('classic order saves, finalizes, duplicates and shows exact server totals i
  await expect(page.getByLabel('Cod produs 1',{exact:true})).toHaveValue('P1');
  await page.getByRole('button',{name:'TR — Türkçe'}).click();
  await expect(page.getByRole('button',{name:'Taslağı kaydet'})).toBeVisible();
+ await page.getByRole('button',{name:'RO — Română'}).click();
+ // On API 2.67.0 the order list shows the type of both orders (the duplicate keeps it).
+ await page.getByRole('link',{name:'Comenzi',exact:true}).click();
+ await expect(page.getByRole('link',{name:'B2B-ORD-000001'})).toBeVisible();
+ await expect(page.getByTestId('order-list-type')).toHaveText(['Doar debitare','Doar debitare']);
+ await page.getByRole('button',{name:'TR — Türkçe'}).click();
  expect(api.state.requests).toContain('POST /b2b/orders');
  expect(await page.evaluate(()=>[sessionStorage.length,Object.keys(localStorage)])).toEqual([0,['arasya.b2b.locale']]);
 });
@@ -209,7 +215,7 @@ test('frozen orders show their historical contact and addresses, and line counts
   await expect(page.getByRole('dialog')).toContainText(`${draft.code} · 3 produse · RON`);
 });
 
-test('zero-downtime release: B2B 0.9.0 on Operations API 2.66.0 neither shows nor sends the order type and still finalizes',async({page})=>{
+test('zero-downtime release: B2B 0.9.x on Operations API 2.66.0 neither shows nor sends the order type and still finalizes',async({page})=>{
  const api=await mockApi(page,{loggedIn:true,permissions:perms,features:null}); const companyId=api.companies.seed({legalName:'Synthetic Legacy SRL',taxIdentifier:'1234'});
  const bodies:unknown[]=[];
  page.on('request',r=>{ if(r.url().startsWith(API+'/b2b/orders') && ['POST','PUT'].includes(r.method())) bodies.push(r.postDataJSON()); });
@@ -229,6 +235,15 @@ test('zero-downtime release: B2B 0.9.0 on Operations API 2.66.0 neither shows no
  await page.getByRole('button',{name:'Confirmă finalizarea'}).click();
  await expect(page.getByText('Finalizată',{exact:true}).first()).toBeVisible();
  await expect(page.getByTestId('finance-panel')).toHaveCount(0);
+ // Neither the order list nor the company order history shows a type badge on API 2.66.0.
+ await page.goto('/comenzi');
+ await expect(page.getByRole('link',{name:'B2B-ORD-000001'})).toBeVisible();
+ await expect(page.getByTestId('order-list-type')).toHaveCount(0);
+ await expect(page.getByText('Tip neales')).toHaveCount(0);
+ await page.goto(`/companii/${companyId}`);
+ await expect(page.getByRole('link',{name:'B2B-ORD-000001'})).toBeVisible();
+ await expect(page.getByTestId('order-list-type')).toHaveCount(0);
+ await expect(page.getByText('Tip neales')).toHaveCount(0);
  expect(bodies.length).toBeGreaterThan(0);
  expect(bodies.some(b=>Object.hasOwn(b as object,'orderType'))).toBe(false);
 });

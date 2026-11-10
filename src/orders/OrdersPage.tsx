@@ -4,8 +4,9 @@ import type { OrderList, OrderQuery } from "../api/orders";
 import { useI18n } from "../i18n/context";
 import { orderPath } from "./model";
 
-export function OrdersPage({ api, canView, canCreate, navigate, companyId }: {
-  api: B2bApi; canView: boolean; canCreate: boolean; navigate: (path: string) => void; companyId?: string;
+/** `orderTypes` false: an API before 2.67.0 knows no order type, so the list shows no type badge (see `OrderPage`). */
+export function OrdersPage({ api, canView, canCreate, navigate, companyId, orderTypes }: {
+  api: B2bApi; canView: boolean; canCreate: boolean; navigate: (path: string) => void; companyId?: string; orderTypes: boolean;
 }) {
   const { t, problem, dateTime } = useI18n(), o = t.orders;
   const [query, setQuery] = useState<OrderQuery>({ search: "", status: "all", currency: "all", from: "", to: "" });
@@ -52,8 +53,8 @@ export function OrdersPage({ api, canView, canCreate, navigate, companyId }: {
         <div><a className="order-code mono" href={orderPath(i.id)} onClick={e => { e.preventDefault(); navigate(orderPath(i.id)); }}>{i.code}</a>
           <h3>{i.companyName}</h3><p className="muted">{dateTime(i.createdAt)} · {i.createdBy.displayName}</p>
           {i.customerReference && <p>{i.customerReference}</p>}</div>
-        <div><span className={`badge status-${i.status}`}>{o[i.status]}</span>{" "}
-          <span className={`badge order-type-badge${i.orderType ? "" : " order-type-missing"}`}>{i.orderType ? o.orderTypes[i.orderType] : o.noOrderType}</span><dl className="order-list-totals">
+        <div><span className={`badge status-${i.status}`}>{o[i.status]}</span>
+          {orderTypes && <>{" "}<span className={`badge order-type-badge${i.orderType ? "" : " order-type-missing"}`} data-testid="order-list-type">{i.orderType ? o.orderTypes[i.orderType] : o.noOrderType}</span></>}<dl className="order-list-totals">
           {(["net", "vat", "gross"] as const).map(k => <div key={k}><dt>{o[k]}</dt><dd>{i.totals?.[k] ?? "—"} {i.currencyCode}</dd></div>)}
         </dl></div>
       </article>)}

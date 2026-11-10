@@ -73,7 +73,8 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
     if (method === "GET" && !id) {
       const search = (query.get("search") ?? "").toLowerCase();
       const filtered = orders.filter(o => (!query.get("companyId") || o.companyId === query.get("companyId")) &&
-        (!query.get("status") || o.status === query.get("status")) && (!query.get("currency") || o.currencyCode === query.get("currency")) &&
+        // "all" is no filter, as on the Operations API.
+        ([null, "all"].includes(query.get("status")) || o.status === query.get("status")) && ([null, "all"].includes(query.get("currency")) || o.currencyCode === query.get("currency")) &&
         (!query.get("from") || o.createdAt.slice(0, 10) >= query.get("from")!) && (!query.get("to") || o.createdAt.slice(0, 10) <= query.get("to")!) &&
         (!search || [o.code, String(o.companySnapshot.legalName), o.customerReference ?? "", ...o.lines.map(l => l.productCode)].some(v => v.toLowerCase().includes(search))));
       const start = Number(query.get("cursor") ?? 0), limit = Number(query.get("limit") ?? 25);

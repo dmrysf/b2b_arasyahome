@@ -24,7 +24,7 @@ const SECTIONS: Section[] = ["info", "contacts", "addresses", "notes", "activity
  * One company: identity and fiscal data, contacts, addresses, internal notes and activity, each in its own section
  * so no single form grows huge. Every action is offered only with the matching permission; the server decides.
  */
-export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities, canViewAccount = false }: { api: B2bApi; id: string; navigate: (path: string) => void; flash: string | null; orderCapabilities?: OrderCapabilities; canViewAccount?: boolean }) {
+export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities, canViewAccount = false, orderTypes = false }: { api: B2bApi; id: string; navigate: (path: string) => void; flash: string | null; orderCapabilities?: OrderCapabilities; canViewAccount?: boolean; orderTypes?: boolean }) {
   const { t } = useI18n();
   const c = t.companies;
   const [detail, setDetail] = useState<CompanyDetail | null>(null);
@@ -95,7 +95,7 @@ export function CompanyDetailPage({ api, id, navigate, flash, orderCapabilities,
         {section === "account" && canViewAccount && <AccountPanel api={api} companyId={company.id} />}
         {section === "activity" && <ActivitySection key={company.version + detail.contacts.length + detail.addresses.length} api={api} companyId={company.id} />}
       </div>
-      {orderCapabilities?.canView && <OrdersPage api={api} companyId={id} canView canCreate={orderCapabilities.canCreate && company.status === "active"} navigate={navigate} />}
+      {orderCapabilities?.canView && <OrdersPage api={api} companyId={id} canView canCreate={orderCapabilities.canCreate && company.status === "active"} navigate={navigate} orderTypes={orderTypes} />}
     </div>
   );
 }
