@@ -17,9 +17,10 @@ export const emptyOrder = (companyId = ""): OrderDraft => ({
 });
 const nullable = (s: string) => s.trim() || null;
 const dec = (s: string) => s.trim().replace(",", ".");
-export function orderFields(d: OrderDraft): OrderFields {
+/** `orderTypes` false: an API before 2.67.0, which refuses the unknown field; the type is then neither sent nor required. */
+export function orderFields(d: OrderDraft, orderTypes = true): OrderFields {
   return {
-    companyId: d.companyId, currencyCode: d.currencyCode, orderType: d.orderType || null, contactId: nullable(d.contactId),
+    companyId: d.companyId, currencyCode: d.currencyCode, ...(orderTypes ? { orderType: d.orderType || null } : {}), contactId: nullable(d.contactId),
     billingAddressId: nullable(d.billingAddressId), deliveryAddressId: nullable(d.deliveryAddressId),
     customerReference: nullable(d.customerReference), notes: nullable(d.notes), productionNotes: nullable(d.productionNotes),
     lines: d.lines.map(l => ({

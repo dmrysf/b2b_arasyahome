@@ -36,6 +36,8 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
   const capabilities = () => ({ canView: can("view"), canCreate: can("create"), canUpdate: can("update"), canFinalize: can("manage_status"), canCancel: can("manage_status") });
   // Finance gate double (Operations API 2.67.0): null = an older API. `refuse` makes finalization answer the server's 409.
   const finance: { gate: unknown; refuse: string[] | null } = { gate: null, refuse: null };
+  // Operations API 2.66.0 (before order types): `orderType` is an unknown field there and nothing requires it.
+  const api = { legacy: false };
   const detail = (order: Order) => ({ order: finance.gate === null ? order : { ...order, financeGate: order.status === "draft" ? finance.gate : null }, capabilities: capabilities() });
   const answer = (order: Order, status = 200): Reply => ({ status, body: { orderId: order.id, detail: can("view") ? detail(order) : null } });
   const event = (order: Order, action: string) => {
@@ -85,6 +87,7 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
       return action === "activity" ? { status: 200, body: { items: events.get(id), nextCursor: null } } : { status: 200, body: detail(order) };
     }
     if (!key) return fail(400, "IDEMPOTENCY_KEY_REQUIRED");
+    if (api.legacy && Object.hasOwn(body, "orderType")) return { status: 422, body: { error: { code: "VALIDATION_FAILED", message: "Unknown field.", details: { fields: { orderType: "unknown" } } } } };
     let status = 200;
     if (!id) {
       const fields = body as OrderFields;
@@ -102,7 +105,7 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
         if (action === "finalize") {
           if (!order.calculation.complete) return fail(422, "VALIDATION_FAILED");
           // Like the server: the order type is chosen explicitly and required at finalization.
-          if (!order.orderType) return { status: 422, body: { error: { code: "VALIDATION_FAILED", message: "Choose the order type.", details: { fields: { orderType: "required" } } } } };
+          if (!api.legacy && !order.orderType) return { status: 422, body: { error: { code: "VALIDATION_FAILED", message: "Choose the order type.", details: { fields: { orderType: "required" } } } } };
           if (finance.refuse) return { status: 409, body: { error: { code: "FINANCE_NOT_ELIGIBLE", message: "English server text", details: { reasons: finance.refuse, phase: "finalization" } } } };
           order.status = "finalized"; order.finalizedAt = new Date().toISOString(); order.finalizedBy = actor;
           order.companySnapshot = snapshot(order.companyId)!;
@@ -129,5 +132,5 @@ export function createOrderStore(permissions: string[], companies: ReturnType<ty
     return answer(order, status);
   };
   const externalEdit = (id: string, patch: Partial<Order>) => { const order = orders.find(o => o.id === id)!; Object.assign(order, patch); order.version += 1; };
-  return { handle, seed, orders, externalEdit, finance };
+  return { handle, seed, orders, externalEdit, finance, api };
 }

@@ -30,7 +30,8 @@ export type LineInput = {
   notes: string | null; productionNotes: string | null;
 };
 export type OrderFields = {
-  companyId: string; currencyCode: Currency; orderType: OrderType | null; contactId: string | null; billingAddressId: string | null; deliveryAddressId: string | null;
+  /** Absent only in a request to an API before 2.67.0 (see orderFields). */
+  companyId: string; currencyCode: Currency; orderType?: OrderType | null; contactId: string | null; billingAddressId: string | null; deliveryAddressId: string | null;
   customerReference: string | null; notes: string | null; productionNotes: string | null; lines: LineInput[];
 };
 export type Totals = { net: string; vat: string; gross: string };

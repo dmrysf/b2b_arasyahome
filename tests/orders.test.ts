@@ -94,3 +94,15 @@ test('the order type is explicit, strictly mapped and independent of the line ki
  assert.equal(MESSAGES.ro.orders.orderTypes.CUT_ONLY, 'Doar debitare'); assert.equal(MESSAGES.tr.orders.orderTypes.FULL_ROLL_BAG, 'Tam Poşet / Rulo');
  assert.equal(MESSAGES.ro.orders.orderTypeRoutes.FULL_ROLL_BAG, 'Pregătire material → Livrare');
 });
+
+test('zero-downtime release: B2B 0.9.0 reads the API features and omits the order type for an API before 2.67.0', async () => {
+ for (const [features, expected] of [[undefined, { orderTypes: false, financeGate: false }], [['orderTypes', 'financeGate', 'unknown'], { orderTypes: true, financeGate: true }], ['orderTypes', { orderTypes: false, financeGate: false }]] as const) {
+  const fake = fakeFetch(c => ({ body: c.url.pathname === '/auth/session' ? sessionPayload() : { ...accessPayload(), ...(features === undefined ? {} : { features }) } }));
+  const api = createApi(API, fake.fetchImpl); await api.getSession();
+  assert.deepEqual((await api.access()).features, expected);
+ }
+ const draft = { ...emptyOrder('c'), orderType: 'CUT_ONLY' as const };
+ assert.equal(orderFields(draft).orderType, 'CUT_ONLY');
+ assert.equal(orderFields(emptyOrder('c')).orderType, null, 'API 2.67.0: an unchosen type is sent as null');
+ assert.equal(Object.hasOwn(orderFields(draft, false), 'orderType'), false, 'API 2.66.0 refuses the unknown field, so it is never sent');
+});

@@ -5,7 +5,7 @@ import { Intent } from "../companies/idempotency";
 import { currencyLocked, emptyLine, emptyOrder, LatestCalculation, orderDraft, orderFields, orderPath, type LineDraft, type OrderDraft } from "./model";
 
 export function useOrderEditor(api: B2bApi, id: string | undefined, companyId: string | undefined, capabilities: OrderCapabilities,
-  canCompanyView: boolean, navigate: (path: string) => void, onDirty: (dirty: boolean) => void) {
+  canCompanyView: boolean, navigate: (path: string) => void, onDirty: (dirty: boolean) => void, orderTypes = true) {
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [draft, setDraft] = useState(() => emptyOrder(companyId)), [base, setBase] = useState(() => emptyOrder(companyId));
   const [loading, setLoading] = useState(!!id), [busy, setBusy] = useState(false), [error, setError] = useState<unknown>(null);
@@ -21,7 +21,7 @@ export function useOrderEditor(api: B2bApi, id: string | undefined, companyId: s
   const frozen = !!detail && detail.order.status !== "draft";
   const editable = !frozen && notice !== "createdNoView" && (id ? caps.canUpdate : caps.canCreate && canCompanyView);
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(base), [draft, base]);
-  const submitted = useMemo(() => orderFields(draft), [draft]);
+  const submitted = useMemo(() => orderFields(draft, orderTypes), [draft, orderTypes]);
   const fingerprint = useMemo(() => JSON.stringify({ currencyCode: submitted.currencyCode, lines: submitted.lines }), [submitted]);
   const calculation = frozen ? detail!.order.calculation : calc?.fingerprint === fingerprint ? calc.value : null;
   const calculationError = calcError?.fingerprint === fingerprint ? calcError.error : null;
@@ -85,7 +85,7 @@ export function useOrderEditor(api: B2bApi, id: string | undefined, companyId: s
   async function mutate(action: "save" | "finalize" | "duplicate" | "cancel") {
     if (lock.current || conflict) return;
     if (action === "save" && (!editable || (!dirty && !!id))) return;
-    if (action === "finalize" && (!detail || dirty || !calculation?.complete || !caps.canFinalize)) return;
+    if (action === "finalize" && (!detail || dirty || !calculation?.complete || !caps.canFinalize || (orderTypes && !draft.orderType))) return;
     if (action === "cancel" && (!detail || dirty || !caps.canCancel)) return;
     if (action === "duplicate" && (!detail || dirty || !caps.canCreate || !caps.canView)) return;
     lock.current = true; setBusy(true); setError(null); setFields({});
@@ -126,7 +126,7 @@ export function useOrderEditor(api: B2bApi, id: string | undefined, companyId: s
     else acceptDetail(current);
     intent.current.done(); setConflict(false); setCurrent(null); setError(null); setFields({});
   }
-  return { detail, draft, caps, loading, busy, dirty, frozen, editable, error, fields, notice, conflict, current, confirm,
+  return { orderTypes, detail, draft, caps, loading, busy, dirty, frozen, editable, error, fields, notice, conflict, current, confirm,
     setConfirm, calculation, calculationError, currencyIsLocked: currencyLocked(submitted.lines, detail?.order.lines ?? []),
     change, changeLine, lineAction, mutate, loadCurrent, resolveConflict, productionSubmitted };
 }

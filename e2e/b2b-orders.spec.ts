@@ -208,3 +208,27 @@ test('frozen orders show their historical contact and addresses, and line counts
   await page.getByRole('button', { name: 'Anulează comanda', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText(`${draft.code} · 3 produse · RON`);
 });
+
+test('zero-downtime release: B2B 0.9.0 on Operations API 2.66.0 neither shows nor sends the order type and still finalizes',async({page})=>{
+ const api=await mockApi(page,{loggedIn:true,permissions:perms,features:null}); const companyId=api.companies.seed({legalName:'Synthetic Legacy SRL',taxIdentifier:'1234'});
+ const bodies:unknown[]=[];
+ page.on('request',r=>{ if(r.url().startsWith(API+'/b2b/orders') && ['POST','PUT'].includes(r.method())) bodies.push(r.postDataJSON()); });
+ await page.goto(`/comenzi/noua?companyId=${companyId}`);
+ await expect(page.getByRole('heading',{name:'Comandă nouă'})).toBeVisible();
+ await expect(page.getByRole('radio',{name:/Doar debitare/})).toHaveCount(0);
+ await expect(page.getByTestId('order-type-badge')).toHaveCount(0);
+ await page.getByRole('button',{name:'Adaugă linie'}).click();
+ await page.getByLabel('Cod produs 1',{exact:true}).fill('P1');
+ await page.getByLabel('Preț unitar net 1').fill('10,00');
+ await page.getByLabel('TVA % 1').fill('19');
+ await expect(page.getByTestId('order-totals')).toContainText('11.90 RON');
+ await page.getByRole('button',{name:'Salvează ciorna',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'B2B-ORD-000001'})).toBeVisible();
+ await expect(page.getByText('Alegeți tipul comenzii înainte de finalizare.')).toHaveCount(0);
+ await page.getByRole('button',{name:'Finalizează',exact:true}).click();
+ await page.getByRole('button',{name:'Confirmă finalizarea'}).click();
+ await expect(page.getByText('Finalizată',{exact:true}).first()).toBeVisible();
+ await expect(page.getByTestId('finance-panel')).toHaveCount(0);
+ expect(bodies.length).toBeGreaterThan(0);
+ expect(bodies.some(b=>Object.hasOwn(b as object,'orderType'))).toBe(false);
+});

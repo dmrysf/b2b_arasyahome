@@ -64,7 +64,11 @@ function mapAccess(value: unknown): B2bAccess {
   const permissions = Array.isArray(raw.permissions)
     ? [...COMPANY_PERMISSIONS, ...ORDER_PERMISSIONS, ...ACCOUNT_PERMISSIONS, ...PRODUCTION_PERMISSIONS, ...PROJECT_PERMISSIONS].filter((permission) => (raw.permissions as unknown[]).includes(permission))
     : [];
-  return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions };
+  // API 2.67.0 announces its contract features. API 2.66.0 sends none, so B2B 0.9.0 may be deployed first and keeps working
+  // after an API rollback: without orderTypes it neither shows nor sends the order type.
+  const features = Array.isArray(raw.features) ? raw.features : [];
+  return { application: "b2b", employee: { displayName: employee.displayName, username: employee.username, isRoot: employee.isRoot }, authorizationVersion: raw.authorizationVersion, permissions,
+    features: { orderTypes: features.includes("orderTypes"), financeGate: features.includes("financeGate") } };
 }
 
 export type CompanyQuery = { search?: string; status?: StatusFilter; country?: string; cursor?: string | null; limit?: number };

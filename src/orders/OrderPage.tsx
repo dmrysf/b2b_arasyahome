@@ -11,13 +11,15 @@ import { ProductionCard } from '../production/ProductionCard';
 import { FinancePanel } from './FinancePanel';
 import type { ProductionCapabilities } from '../api/production';
 
-export function OrderPage({ api, id, companyId, capabilities, productionCapabilities = { canView: false, canSubmit: false }, canCompanyView, navigate, onDirty }: {
+export function OrderPage({ api, id, companyId, capabilities, productionCapabilities = { canView: false, canSubmit: false }, canCompanyView, navigate, onDirty, orderTypes = true }: {
   api: B2bApi; id?: string; companyId?: string; capabilities: OrderCapabilities; canCompanyView: boolean;
+  /** False on an API before 2.67.0: no order type is shown, sent or required (zero-downtime release order). */
+  orderTypes?: boolean;
   productionCapabilities?: ProductionCapabilities;
   navigate: (path: string) => void; onDirty: (dirty: boolean) => void;
 }) {
   const { t, problem, dateTime } = useI18n(), o = t.orders;
-  const e = useOrderEditor(api, id, companyId, capabilities, canCompanyView, navigate, onDirty);
+  const e = useOrderEditor(api, id, companyId, capabilities, canCompanyView, navigate, onDirty, orderTypes);
   const [company, setCompany] = useState<CompanyDetail | null>(null), [companies, setCompanies] = useState<CompanyListItem[]>([]);
   const [search, setSearch] = useState(""), [companyError, setCompanyError] = useState<unknown>(null);
   const editor = useRef<HTMLFormElement>(null);
@@ -84,7 +86,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
       <a className="back-link" href="/comenzi" onClick={event => { event.preventDefault(); navigate("/comenzi"); }}>← {o.title}</a>
       <p className="eyebrow">{o.workstation}</p><h1>{order?.code ?? o.newOrder}</h1>
       <div className="order-heading-meta"><span className={`badge status-${order?.status ?? "draft"}`}>{o[order?.status ?? "draft"]}</span>
-        <span className={`badge order-type-badge${e.draft.orderType ? "" : " order-type-missing"}`} data-testid="order-type-badge">{e.draft.orderType ? o.orderTypes[e.draft.orderType] : o.noOrderType}</span>
+        {orderTypes && <span className={`badge order-type-badge${e.draft.orderType ? "" : " order-type-missing"}`} data-testid="order-type-badge">{e.draft.orderType ? o.orderTypes[e.draft.orderType] : o.noOrderType}</span>}
         {order && <span>{o.version} {order.version} · {dateTime(order.updatedAt)}</span>}
         {e.dirty && <span className="unsaved-dot" role="status">{o.unsavedState}</span>}
       </div>
@@ -127,7 +129,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
             (company?.addresses ?? []).filter(a => a.status === "active" && a.type === "delivery").map(a => ({ id: a.id, label: addressLabel(a) })))}
         </div>
         {e.currencyIsLocked && !e.frozen && <p className="muted">{o.currencyHint}</p>}
-        <fieldset className="order-type" aria-describedby="order-type-hint">
+        {orderTypes && <fieldset className="order-type" aria-describedby="order-type-hint">
           <legend>{o.orderType}</legend>
           <p id="order-type-hint" className="muted">{o.orderTypeHint}</p>
           <div className="order-type-options" role="radiogroup" aria-label={o.orderType}>{ORDER_TYPES.map(type =>
@@ -136,7 +138,7 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
               <span><strong>{o.orderTypes[type]}</strong><small>{o.orderTypeRoutes[type]}</small><small className="muted">{o.orderTypeWork[type]}</small></span>
             </label>)}</div>
           <FieldError reason={e.fields.orderType} />
-        </fieldset>
+        </fieldset>}
         <div className="grid-2">{(["notes", "productionNotes"] as const).map(key => <label key={key}>{o[key]}<textarea maxLength={2000} value={e.draft[key]} onChange={event => e.change({ [key]: event.target.value })} /><FieldError reason={e.fields[key]} /></label>)}</div>
       </section>
       <section className="order-lines"><div className="order-section-title"><div><h2>{o.lines} <span className="count">{e.draft.lines.length}</span></h2><p className="muted">{o.measureHint}</p></div>
@@ -163,11 +165,11 @@ export function OrderPage({ api, id, companyId, capabilities, productionCapabili
         : <p>{e.calculationError !== null ? problem(e.calculationError) : e.calculation ? o.incomplete : o.pending}</p>}</div>
       <div className="order-actions">
         {e.editable && <button type="button" className="button" disabled={e.busy || e.conflict || !e.draft.companyId || (!!id && !e.dirty)} onClick={() => void e.mutate("save")}>{e.busy ? t.common.saving : o.save}</button>}
-        {id && e.caps.canFinalize && !e.frozen && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict || !e.calculation?.complete || !e.draft.orderType} onClick={() => e.setConfirm("finalize")}>{o.finalize}</button>}
+        {id && e.caps.canFinalize && !e.frozen && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict || !e.calculation?.complete || (orderTypes && !e.draft.orderType)} onClick={() => e.setConfirm("finalize")}>{o.finalize}</button>}
         {id && e.caps.canCancel && !order?.productionSubmitted && order?.status !== "cancelled" && <button type="button" className="button button-ghost" disabled={e.busy || e.dirty || e.conflict} onClick={() => e.setConfirm("cancel")}>{o.cancelOrder}</button>}
         {id && e.caps.canCreate && e.caps.canView && <button type="button" className="button button-secondary" disabled={e.busy || e.dirty || e.conflict} onClick={() => void e.mutate("duplicate")}>{o.duplicate}</button>}
       </div>
-      {id && !e.frozen && !e.draft.orderType && <p className="muted" role="note">{o.orderTypeRequired}</p>}
+      {orderTypes && id && !e.frozen && !e.draft.orderType && <p className="muted" role="note">{o.orderTypeRequired}</p>}
       {!e.frozen && <p className="muted keyboard-hint">{o.keyboardHint}</p>}
     </section>
     {e.confirm && e.detail && <OrderConfirmation detail={e.detail} action={e.confirm} busy={e.busy} onConfirm={() => void e.mutate(e.confirm!)} onClose={() => e.setConfirm(null)} />}
