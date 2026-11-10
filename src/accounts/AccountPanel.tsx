@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type R
 import type { B2bApi } from "../api/client";
 import {
   ACCOUNT_CURRENCIES, MOVEMENT_TYPES, PAYMENT_METHODS, type AccountActivity, type AccountCurrency, type AccountMutation, type AccountSummary, type Direction,
-  type Movement, type MovementDetail, type MovementQuery, type OpenItem, type PaymentMethod, type Statement,
+  type FinanceRequestItem, type Movement, type MovementDetail, type MovementQuery, type OpenItem, type PaymentMethod, type Statement,
 } from "../api/accounts";
 import { ApiError } from "../api/errors";
 import { Intent } from "../companies/idempotency";
@@ -46,6 +46,7 @@ export function AccountPanel({ api, companyId }: { api: B2bApi; companyId: strin
   return (
     <div className="account-panel">
       {!active && <p className="notice notice-warning" role="note">{a.inactiveHint}</p>}
+      {caps.writesMovedToFinance && <p className="notice notice-info" role="note" data-testid="account-finance-mode">{a.writesMovedToFinance}</p>}
       {notice && <p className="notice notice-success" role="status">{notice.text}</p>}
       <div className="account-balances">
         {ACCOUNT_CURRENCIES.map((currency) => <BalanceCard key={currency} currency={currency} summary={summary} />)}
@@ -61,6 +62,7 @@ export function AccountPanel({ api, companyId }: { api: B2bApi; companyId: strin
       {form?.kind === "payment" && <PaymentForm api={api} companyId={companyId} onCancel={() => setForm(null)} onDone={(r) => changed(r, a.payment_ok)} />}
       {form && form.kind !== "payment" && <EntryForm key={form.kind} api={api} companyId={companyId} kind={form.kind} active={active} summary={summary}
         onCancel={() => setForm(null)} onDone={(r) => changed(r, form.kind === "opening" ? a.opening_ok : a.adjustment_ok)} />}
+      <FinanceRequestsSection key={`f${revision}`} api={api} companyId={companyId} />
       <MovementsSection key={`m${revision}`} api={api} companyId={companyId} summary={summary} onChanged={changed} />
       <StatementSection key={`s${revision}`} api={api} summary={summary} />
       <ActivitySection key={`a${revision}`} api={api} companyId={companyId} />
@@ -378,12 +380,40 @@ function MovementsSection({ api, companyId, summary, onChanged }: { api: B2bApi;
   );
 }
 
+/**
+ * Finance requests of this company (API 2.68.0), read-only: what is waiting for a second person in Finance and what was
+ * decided recently. Nothing here can be changed; an older API without the route shows nothing.
+ */
+function FinanceRequestsSection({ api, companyId }: { api: B2bApi; companyId: string }) {
+  const { t, locale } = useI18n();
+  const a = t.accounts;
+  const [items, setItems] = useState<FinanceRequestItem[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    api.accountFinanceRequests(companyId).then((result) => { if (live) setItems(result); }).catch(() => { if (live) setItems([]); });
+    return () => { live = false; };
+  }, [api, companyId]);
+  if (!items || items.length === 0) return null;
+  return (
+    <section className="account-section" aria-labelledby={`finance-requests-${companyId}`} data-testid="account-finance-requests">
+      <h3 id={`finance-requests-${companyId}`}>{a.financeRequests}</h3>
+      <p className="hint">{a.financeRequestsHint}</p>
+      <ul className="plain-list">
+        {items.map((item) => (
+          <li key={item.code}><span className="mono">{item.code}</span> · {a.financeKinds[item.kind]} · <span className="mono">{formatMoney(item.amount, locale, item.currencyCode)}</span> · {item.valueDate} · <span className={`badge ${item.status === "PENDING_APPROVAL" ? "badge-warning" : "badge-muted"}`}>{a.financeStatuses[item.status]}</span></li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function MovementRow({ api, companyId, movement, summary, onChanged }: { api: B2bApi; companyId: string; movement: Movement; summary: AccountSummary; onChanged: (result: AccountMutation, message: string) => void }) {
   const { t, locale, dateTime } = useI18n();
   const a = t.accounts;
   const [panel, setPanel] = useState<"details" | "reverse" | "allocate" | null>(null);
   const caps = summary.capabilities;
-  const reversible = caps.canReverse && movement.type !== "reversal" && movement.type !== "order_receivable" && movement.reversedBy === null;
+  // A movement approved in Finance (and every refund) is corrected in Finance by a second person; the API refuses it here too.
+  const reversible = caps.canReverse && movement.type !== "reversal" && movement.type !== "order_receivable" && !movement.postedByFinance && movement.reversedBy === null;
   const allocatable = caps.canRecordPayment && movement.type === "payment" && movement.reversedBy === null && movement.open !== null && toCents(movement.open) > 0n;
   const toggle = (next: typeof panel) => setPanel((current) => (current === next ? null : next));
   return (
@@ -401,6 +431,7 @@ function MovementRow({ api, companyId, movement, summary, onChanged }: { api: B2
         {movement.reasonCode === "order_cancelled" && <p className="meta">{a.orderCancelled}</p>}
         {movement.externalReference && <p className="meta">{a.reference}: {movement.externalReference}</p>}
         {movement.note && <p className="meta">{movement.type === "payment" ? a.note : a.reason}: {movement.note}</p>}
+        {movement.postedByFinance && <p className="meta">{a.postedByFinance}</p>}
       </div>
       <div className="movement-amount">
         <span className={`amount amount-${movement.direction}`}>{a.directions[movement.direction]} <strong className="mono">{formatMoney(movement.amount, locale, movement.currencyCode)}</strong></span>

@@ -14,7 +14,7 @@ export type Session = { employee: SessionEmployee; expiresAt: string };
 import type { CompanyPermission } from "./companies";
 
 /** GET /b2b/access: the server-side B2B application gate, with the module permissions usable right now. */
-export type B2bFeatures = { orderTypes: boolean; financeGate: boolean };
+export type B2bFeatures = { orderTypes: boolean; financeGate: boolean; accountsReadOnly: boolean };
 
 export type B2bAccess = {
   application: "b2b";

@@ -9,7 +9,8 @@ export type AccountPermission = (typeof ACCOUNT_PERMISSIONS)[number];
 
 export const ACCOUNT_CURRENCIES = ["RON", "EUR"] as const;
 export type AccountCurrency = (typeof ACCOUNT_CURRENCIES)[number];
-export const MOVEMENT_TYPES = ["order_receivable", "payment", "opening_balance", "adjustment", "reversal"] as const;
+// "refund" (API 2.68.0): posted only by an approved Finance refund request. An older API never sends it.
+export const MOVEMENT_TYPES = ["order_receivable", "payment", "opening_balance", "adjustment", "reversal", "refund"] as const;
 export type MovementType = (typeof MOVEMENT_TYPES)[number];
 export type Direction = "debit" | "credit";
 export const PAYMENT_METHODS = ["bank_transfer", "cash", "card", "compensation", "other"] as const;
@@ -26,13 +27,19 @@ export type CurrencySummary = {
 };
 export type AccountSummary = {
   company: AccountCompany; currencies: Record<AccountCurrency, CurrencySummary>;
-  capabilities: AccountCapabilities & { companyActive: boolean };
+  capabilities: AccountCapabilities & { companyActive: boolean; writesMovedToFinance: boolean };
 };
+/** API 2.68.0: Finance requests of the company, read-only (codes, status, amounts, dates). */
+export type FinanceRequestStatus = "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "WITHDRAWN" | "PAID_OUT" | "REVERSED";
+export type FinanceRequestItem = { code: string; kind: "PAYMENT" | "ADJUSTMENT" | "REVERSAL" | "REFUND"; status: FinanceRequestStatus; currencyCode: AccountCurrency; amount: string;
+  valueDate: string; submittedAt: string | null; decidedAt: string | null };
 export type Movement = {
   id: string; code: string; type: MovementType; direction: Direction; amount: string; currencyCode: AccountCurrency; valueDate: string;
   orderId: string | null; orderCode: string | null; method: PaymentMethod | null; externalReference: string | null; note: string | null;
   reasonCode: string | null; reverses: { id: string; code: string } | null; reversedBy: { id: string; code: string; valueDate: string } | null;
   allocated: string | null; open: string | null; createdAt: string; createdBy: { id: string; displayName: string };
+  /** API 2.68.0: approved in Finance (or a refund). B2B never offers to reverse it; an older API sends nothing (false). */
+  postedByFinance: boolean;
 };
 export type MovementPage = { items: Movement[]; nextCursor: string | null; capabilities: AccountCapabilities };
 export type Allocation = {
@@ -106,7 +113,8 @@ export function mapAccountSummary(v: unknown): AccountSummary {
     balance: money(s.balance), debits: money(s.debits), credits: money(s.credits), outstandingReceivables: money(s.outstandingReceivables),
     unallocatedPayments: money(s.unallocatedPayments), activeOpeningBalance: bool(s.activeOpeningBalance), movementCount: count(s.movementCount),
   }; };
-  return { company: mapCompany(r.company), currencies: { RON: one(c.RON), EUR: one(c.EUR) }, capabilities: { ...mapAccountCapabilities(caps), companyActive: bool(caps.companyActive) } };
+  return { company: mapCompany(r.company), currencies: { RON: one(c.RON), EUR: one(c.EUR) },
+    capabilities: { ...mapAccountCapabilities(caps), companyActive: bool(caps.companyActive), writesMovedToFinance: caps.writesMovedToFinance === true } };
 }
 export function mapMovement(v: unknown): Movement {
   const r = obj(v), by = obj(r.createdBy);
@@ -116,7 +124,18 @@ export function mapMovement(v: unknown): Movement {
     currencyCode: currency(r.currencyCode), valueDate: date(r.valueDate), orderId: nullable(r.orderId), orderCode: nullable(r.orderCode), method: method(r.method),
     externalReference: nullable(r.externalReference), note: nullable(r.note), reasonCode: nullable(r.reasonCode), reverses: link(r.reverses), reversedBy,
     allocated: moneyNull(r.allocated), open: moneyNull(r.open), createdAt: str(r.createdAt), createdBy: { id: str(by.id), displayName: str(by.displayName) },
+    postedByFinance: r.postedByFinance === true || r.type === "refund",
   };
+}
+
+export function mapFinanceRequests(v: unknown): FinanceRequestItem[] {
+  const r = obj(v);
+  if (!Array.isArray(r.items)) fail();
+  return (r.items as unknown[]).map((x) => { const i = obj(x); return {
+    code: str(i.code), kind: choice(i.kind, ["PAYMENT", "ADJUSTMENT", "REVERSAL", "REFUND"] as const),
+    status: choice(i.status, ["PENDING_APPROVAL", "APPROVED", "REJECTED", "WITHDRAWN", "PAID_OUT", "REVERSED"] as const), currencyCode: currency(i.currencyCode), amount: money(i.amount),
+    valueDate: date(i.valueDate), submittedAt: nullable(i.submittedAt), decidedAt: nullable(i.decidedAt),
+  }; });
 }
 export function mapMovementPage(v: unknown): MovementPage {
   const r = obj(v);
